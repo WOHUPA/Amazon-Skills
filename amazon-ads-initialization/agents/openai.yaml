@@ -1,0 +1,7 @@
+interface:
+  display_name: "Amazon 广告初始化"
+  short_description: "只结合 SIF 数据生成新品广告初始化方案"
+  default_prompt: "使用 $amazon-ads-initialization，基于固定产品信息和 SIF MCP 数据生成 Amazon 新品广告初始化方案。"
+
+policy:
+  allow_implicit_invocation: true
