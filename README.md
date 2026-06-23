@@ -211,7 +211,7 @@ Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.claude\skills\
 
 ## 微信公众号
 
-<img src="docs/images/wechat-official-account-qrcode.jpg" alt="微信公众号二维码" width="400" height="400" />
+<img src="docs/images/wechat-official-account-qrcode.jpg" alt="微信公众号二维码" width="200" height="200" />
 
 公众号内容聚焦 `亚马逊跨境电商 + AI` 的实战结合，持续分享两类内容：一类是围绕选品、广告、流量、内容生产、自动化提效等场景的深度文章；另一类是围绕 Codex、Claude Code、Amazon 运营工作流和相关工具链的开源项目发布、迭代记录与落地经验。
 
