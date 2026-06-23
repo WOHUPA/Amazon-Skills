@@ -1,0 +1,11 @@
+interface:
+  display_name: "Skill 优化器"
+  short_description: "诊断/优化/升级任何 Codex Skill 的性能与能力"
+  brand_color: "#10B981"
+  default_prompt: "帮我优化这个 skill："
+
+policy:
+  # 允许隐式触发：用户说"优化 skill / skill 不触发 / 给 skill 体检"时自动命中
+  allow_implicit_invocation: true
+
+# 本 skill 为纯指令+脚本，不依赖外部 MCP。如未来接入评测 MCP 可在此声明。
