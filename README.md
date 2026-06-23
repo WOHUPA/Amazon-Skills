@@ -209,6 +209,21 @@ Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.claude\skills\
 - 涉及固定输出格式时，优先放到 `assets/` 模板中。
 - 每次实质性升级后，建议使用 `skill-optimizer` 重新体检并记录演进。
 
+## 微信公众号
+
+![微信公众号二维码](docs/images/wechat-official-account-qrcode.jpg)
+
+公众号内容聚焦 `亚马逊跨境电商 + AI` 的实战结合，持续分享两类内容：一类是围绕选品、广告、流量、内容生产、自动化提效等场景的深度文章；另一类是围绕 Codex、Claude Code、Amazon 运营工作流和相关工具链的开源项目发布、迭代记录与落地经验。
+
+这里会更强调“能直接拿来用”的内容，而不只是概念讨论，更新方向通常包括：
+
+- 亚马逊运营与 AI 结合的实战方法、流程拆解和案例复盘。
+- 广告投放、关键词策略、数据分析、内容生成等场景的提效思路。
+- 与跨境电商相关的 AI Agent、Skill、自动化脚本和开源项目发布。
+- 项目更新日志、使用说明、踩坑记录和工作流优化经验。
+
+如果你也在关注 Amazon 跨境电商、AI 提效和可复用的运营工具，欢迎扫码关注，一起跟进最新文章和项目更新。
+
 ## 许可证
 
 MIT License
