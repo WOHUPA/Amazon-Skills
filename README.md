@@ -51,6 +51,47 @@ Amazon Skills 是一组面向 Amazon 运营、广告投放和 Skill 工程化的
 | --- | --- | --- |
 | `amazon-ads-initialization` | Amazon 新品广告初始化方案 | 新品 launch、广告结构设计、预算与关键词规划 |
 | `skill-optimizer` | Skill 体检、优化和回归治理 | Skill 不触发、触发打架、输出不稳定、需要系统升级 |
+| `wohu-amazon-skill-creator` | 亚马逊运营 Skill 创建、优化、审查和评测 | 把运营 SOP、内容流程或工具方法沉淀为可复用 Skill |
+
+## wohu-amazon-skill-creator
+
+亚马逊 Skill 创建器，用于把亚马逊卖家或自媒体的重复工作流沉淀成可触发、可执行、可验证的 Codex Skill。它适合从“我想把这个流程做成 skill”这类模糊需求开始，通过 5 步问答把现有做法、具体步骤、方法论、调用方式和期望输出梳理清楚。
+
+### 能解决什么问题
+
+- 想把选品、广告、Listing、日常运营监控等 SOP 沉淀成可复用 Skill。
+- 已有 Skill 触发不准、输出不稳或缺少评测，需要诊断和优化。
+- 需要把 Sorftime、SIF、SellerSprite 等数据工具设计进未来 Skill 流程。
+- 希望给 Skill 补测试用例、验收标准、触发评测和人工评审基准。
+
+### 功能特性
+
+- 使用创建前质量门判断输入质量 A/B/C/D，避免把空泛需求包装成完整 Skill。
+- 按新建、优化、审查三类入口分流，不强迫已有 Skill 重新走 5 步创建流程。
+- 内置选品开发、关键词广告、Listing 优化、日常运营监控四类业务模板。
+- 区分人工评审用例 `evals/evals.json` 和触发评测用例 `evals/trigger-evals.json`。
+- 明确 Amazon 数据源安全边界：公开市场数据可降级标注，自己店铺后台数据不得用浏览器或视觉抓取兜底。
+
+### 使用方式
+
+```text
+/wohu-amazon-skill-creator
+```
+
+### 目录结构
+
+```text
+wohu-amazon-skill-creator/
+├── SKILL.md                          # Skill 主文件
+├── SKILL.patch.md                    # 演进记录
+├── references/                       # 5 步流程、业务模板、MCP 指南、schema 和写作指南
+├── evals/                            # 人工评审与触发评测用例
+├── scripts/                          # 校验、触发评测、打包和报告脚本
+├── eval-viewer/                      # HTML 评审页生成器
+├── assets/                           # 评审页模板
+├── agents/                           # 分析、对比、评分 Agent 提示
+└── README.md
+```
 
 ## amazon-ads-initialization
 
@@ -201,10 +242,12 @@ skill-optimizer/
 # macOS/Linux
 cp -r skill-optimizer ~/.codex/skills/
 cp -r amazon-ads-initialization ~/.codex/skills/
+cp -r wohu-amazon-skill-creator ~/.codex/skills/
 
 # Windows PowerShell
 Copy-Item -Recurse skill-optimizer $env:USERPROFILE\.codex\skills\
 Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.codex\skills\
+Copy-Item -Recurse wohu-amazon-skill-creator $env:USERPROFILE\.codex\skills\
 ```
 
 ### 安装到 Claude Code
@@ -213,10 +256,12 @@ Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.codex\skills\
 # macOS/Linux
 cp -r skill-optimizer ~/.claude/skills/
 cp -r amazon-ads-initialization ~/.claude/skills/
+cp -r wohu-amazon-skill-creator ~/.claude/skills/
 
 # Windows PowerShell
 Copy-Item -Recurse skill-optimizer $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse wohu-amazon-skill-creator $env:USERPROFILE\.claude\skills\
 ```
 
 ## 推荐使用方式

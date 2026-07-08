@@ -1,0 +1,18 @@
+interface:
+  display_name: "亚马逊 Skill 创建器"
+  short_description: "把亚马逊运营和内容流程沉淀为可复用 Codex skill，并支持优化、审查和评测。"
+
+policy:
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "sif-mcp"
+      description: "仅在新 skill 设计需要 SIF 数据来源时作为可选参考，不在创建流程中默认查询。"
+    - type: "mcp"
+      value: "sellersprite-mcp"
+      description: "仅在新 skill 设计需要 SellerSprite 数据来源时作为可选参考，不在创建流程中默认查询。"
+    - type: "mcp"
+      value: "sorftime-mcp"
+      description: "仅在新 skill 设计需要 Sorftime 数据来源时作为可选参考，不在创建流程中默认查询。"

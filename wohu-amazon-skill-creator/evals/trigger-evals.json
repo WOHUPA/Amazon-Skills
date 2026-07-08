@@ -1,0 +1,50 @@
+[
+  {
+    "query": "我想做一个专门检查 Listing 差评机会点的 skill，你用 wohu-amazon-skill-creator 帮我一步步梳理。",
+    "should_trigger": true
+  },
+  {
+    "query": "先快速试试，帮我把广告搜索词浪费词识别流程做成 skill，先别问太多。",
+    "should_trigger": true
+  },
+  {
+    "query": "这是一个现有 skill 的目录，请你优化它，不要重新从 5 步问起：C:/work/skills/amazon-review-miner",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我审查这个 skill 哪里容易误触发，只要 review，不要改文件。",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我分析这个 ASIN 的竞品关键词机会，直接给结论。",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我写一个 React 表格组件，支持分页和筛选。",
+    "should_trigger": false
+  },
+  {
+    "query": "把用 SIF 和 SellerSprite 查竞品流量再生成周报的流程做成 skill。",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我给刚写好的亚马逊库存预警 skill 加测试用例和验收标准。",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我给这个亚马逊广告 skill 做体检，只要诊断报告，先不要改文件。",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我做一个亚马逊自动化 skill，能把运营都自动处理掉，具体流程你自己想。",
+    "should_trigger": true
+  },
+  {
+    "query": "我已经回答完 5 个问题了，请你生成这个库存预警 skill 的交付说明。",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我优化这个 skill，并让子 agent 一起改快一点。",
+    "should_trigger": true
+  }
+]

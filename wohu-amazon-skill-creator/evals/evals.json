@@ -1,0 +1,150 @@
+{
+  "skill_name": "wohu-amazon-skill-creator",
+  "evals": [
+    {
+      "id": 1,
+      "name": "new_skill_full_intake",
+      "prompt": "我想做一个专门检查 Listing 差评机会点的 skill，你用 wohu-amazon-skill-creator 帮我一步步梳理。",
+      "expected_output": "进入新建 skill 入口，按 5 步通关条件收集现有做法、具体步骤、方法论、调用方式和期望输出。",
+      "files": [],
+      "expectations": [
+        "识别为新建 skill，而不是直接做一次 Listing 分析。",
+        "按 Q1 到 Q5 顺序推进，至少先询问现有做法。",
+        "说明输出会映射到 SKILL.md 的主结构。"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "quick_experiment_exception",
+      "prompt": "先快速试试，帮我把广告搜索词浪费词识别流程做成 skill，先别问太多。",
+      "expected_output": "走快速试验例外，只询问具体步骤和期望输出，并提示后续需要补齐现有做法、方法论和调用方式。",
+      "files": [],
+      "expectations": [
+        "识别用户明确要求快速试验。",
+        "只聚焦 Q2 和 Q5，不一次性丢出完整模板。",
+        "提示快速版本可能偏空，需要后续补齐 Q1、Q3、Q4。"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "optimize_existing_skill",
+      "prompt": "这是一个现有 skill 的目录，请你优化它，不要重新从 5 步问起：C:/work/skills/amazon-review-miner",
+      "expected_output": "进入优化已有 skill 入口，先读取现有 SKILL.md 和相关 references/scripts/README，再给诊断和最小修改计划。",
+      "files": [],
+      "expectations": [
+        "识别为优化已有 skill。",
+        "不强迫用户重新回答 5 步问题。",
+        "计划覆盖触发描述、流程可执行性、上下文体积、工具依赖、跨平台兼容和验证方式。"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "review_without_editing",
+      "prompt": "帮我审查这个 skill 哪里容易误触发，只要 review，不要改文件。",
+      "expected_output": "进入审查已有 skill 入口，按代码审查方式列问题、风险和建议，不直接修改文件。",
+      "files": [],
+      "expectations": [
+        "识别为只审查，不编辑。",
+        "先输出问题和风险，而不是直接套 5 步创建流程。",
+        "不会在用户未授权时修改文件。"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "negative_one_off_analysis",
+      "prompt": "帮我分析这个 ASIN 的竞品关键词机会，直接给结论。",
+      "expected_output": "不触发本 skill，或明确说明这是一次性业务分析，应交给选品/竞品/关键词分析类 skill；除非用户要把该流程沉淀成可复用 skill。",
+      "files": [],
+      "expectations": [
+        "不把一次性竞品或关键词分析误判为 skill 创建任务。",
+        "如果回应，应说明本 skill 只在用户要沉淀流程时使用。",
+        "不询问 5 步创建问题。"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "negative_generic_coding",
+      "prompt": "帮我写一个 React 表格组件，支持分页和筛选。",
+      "expected_output": "不触发本 skill，或明确这是普通代码任务，不属于亚马逊流程 skill 创建。",
+      "files": [],
+      "expectations": [
+        "不把普通代码实现误判为创建 skill。",
+        "不读取亚马逊业务模板。",
+        "不询问 MCP 或运营流程问题。"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "mcp_design_without_live_query",
+      "prompt": "把用 SIF 和 SellerSprite 查竞品流量再生成周报的流程做成 skill。",
+      "expected_output": "设计未来 skill 如何引用 SIF 和 SellerSprite MCP 指南，但不为了写 skill 立刻消耗真实 MCP 查询，除非用户要求现场验证。",
+      "files": [],
+      "expectations": [
+        "读取或引用对应 MCP 集成指南的使用边界。",
+        "把 MCP 工具作为新 skill 的未来数据来源设计。",
+        "明确默认不现场调用 MCP 查询。"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "eval_requirement",
+      "prompt": "帮我给刚写好的亚马逊库存预警 skill 加测试用例和验收标准。",
+      "expected_output": "进入测试与评审流程，准备正常触发、参数缺失、边界场景的测试 prompt，并写可验证 expectations。",
+      "files": [],
+      "expectations": [
+        "覆盖正常触发、参数缺失和边界场景。",
+        "输出可验证断言，而不是只有主观描述。",
+        "建议把新增案例沉淀到 evals/evals.json。"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "review_health_check_full_report",
+      "prompt": "帮我给这个亚马逊广告 skill 做体检，只要诊断报告，先不要改文件。",
+      "expected_output": "进入审查 / 体检已有 skill 入口，输出完整诊断报告，不只给总分、评级或泛泛建议，并在用户确认前不修改文件。",
+      "files": [],
+      "expectations": [
+        "识别为审查 / 体检已有 skill，而不是新建 skill。",
+        "输出完整诊断报告，不能只给总分、评级或几条泛泛建议。",
+        "报告包含结论摘要、证据清单、风险排序、ROI 修复清单、待确认执行计划、验证与未运行项。",
+        "在用户确认前不修改文件，并说明只读取任务必要文件，不暴露密钥、token 或客户敏感信息。"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "low_quality_input_draft_only",
+      "prompt": "帮我做一个亚马逊自动化 skill，能把运营都自动处理掉，具体流程你自己想。",
+      "expected_output": "识别输入质量不足，标注数据质量等级 C 或 D，只输出候选方向、补问清单或草案，不声称已能稳定执行。",
+      "files": [],
+      "expectations": [
+        "标注数据质量等级为 C 或 D，而不是直接生成完整可执行 skill。",
+        "说明缺少稳定任务、输入输出、边界、工具和验证方式。",
+        "只给候选方向或补问清单，不创建外部写操作或自动化执行承诺。"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "delivery_contract_complete",
+      "prompt": "我已经回答完 5 个问题了，请你生成这个库存预警 skill 的交付说明。",
+      "expected_output": "输出完整交付契约，覆盖名称、路径、触发和反触发、输入输出、目录结构、执行流程、验证、风险和后续迭代点。",
+      "files": [],
+      "expectations": [
+        "交付包含 Skill 名称、路径、触发场景、不适用场景、输入要求、输出产物、目录结构和核心执行流程。",
+        "交付包含已运行验证、未验证内容与风险、后续迭代点。",
+        "至少给出一个正例、一个反例和一个最小执行验证。"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "optimization_evidence_chain_and_subagent_boundary",
+      "prompt": "帮我优化这个 skill，并让子 agent 一起改快一点。",
+      "expected_output": "进入优化已有 skill 流程，先输出数据质量等级、证据等级和证据链计划；未获明确确认前不调用 spawn_agent。",
+      "files": [],
+      "expectations": [
+        "先读取目标 skill 并输出数据质量等级和证据等级。",
+        "每个计划项都包含问题、证据等级、改动对象、动作、验收方式和风险。",
+        "未获用户明确确认前不调用 spawn_agent；即使用户提到子 agent，也要先判断当前会话可用性、任务边界和是否建议取消启动。"
+      ]
+    }
+  ]
+}
