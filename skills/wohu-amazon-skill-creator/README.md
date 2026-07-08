@@ -93,8 +93,8 @@
 
 关注「**wohu amazon**」，获取 AI x 跨境电商的实战经验、工具和方法论：
 
-<img src="../docs/images/wechat-official-account-qrcode.jpg" width="200" alt="公众号二维码" />
+<img src="../../docs/images/wechat-official-account-qrcode.jpg" width="200" alt="公众号二维码" />
 
 添加个人微信，一起交流 AI + 跨境电商的实战玩法：
 
-<img src="../docs/images/wechat-personal-qrcode.jpg" width="200" alt="个人微信二维码" />
+<img src="../../docs/images/wechat-personal-qrcode.jpg" width="200" alt="个人微信二维码" />

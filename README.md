@@ -49,9 +49,9 @@ Amazon Skills 是一组面向 Amazon 运营、广告投放和 Skill 工程化的
 
 | Skill | 主要用途 | 适合场景 |
 | --- | --- | --- |
-| `amazon-ads-initialization` | Amazon 新品广告初始化方案 | 新品 launch、广告结构设计、预算与关键词规划 |
-| `skill-optimizer` | Skill 体检、优化和回归治理 | Skill 不触发、触发打架、输出不稳定、需要系统升级 |
-| `wohu-amazon-skill-creator` | 亚马逊运营 Skill 创建、优化、审查和评测 | 把运营 SOP、内容流程或工具方法沉淀为可复用 Skill |
+| [`amazon-ads-initialization`](skills/amazon-ads-initialization/) | Amazon 新品广告初始化方案 | 新品 launch、广告结构设计、预算与关键词规划 |
+| [`skill-optimizer`](skills/skill-optimizer/) | Skill 体检、优化和回归治理 | Skill 不触发、触发打架、输出不稳定、需要系统升级 |
+| [`wohu-amazon-skill-creator`](skills/wohu-amazon-skill-creator/) | 亚马逊运营 Skill 创建、优化、审查和评测 | 把运营 SOP、内容流程或工具方法沉淀为可复用 Skill |
 
 ## wohu-amazon-skill-creator
 
@@ -81,7 +81,7 @@ Amazon Skills 是一组面向 Amazon 运营、广告投放和 Skill 工程化的
 ### 目录结构
 
 ```text
-wohu-amazon-skill-creator/
+skills/wohu-amazon-skill-creator/
 ├── SKILL.md                          # Skill 主文件
 ├── SKILL.patch.md                    # 演进记录
 ├── references/                       # 5 步流程、业务模板、MCP 指南、schema 和写作指南
@@ -137,7 +137,7 @@ Amazon 新品广告初始化 Skill，用于把既有广告投放 SOP 转成可�
 ### 目录结构
 
 ```text
-amazon-ads-initialization/
+skills/amazon-ads-initialization/
 ├── SKILL.md                          # Skill 主文件
 ├── references/
 │   ├── advertising-initialization-rules.md  # 广告初始化规则
@@ -222,7 +222,7 @@ python scripts/audit_description.py path/to/skills-root
 ### 目录结构
 
 ```text
-skill-optimizer/
+skills/skill-optimizer/
 ├── SKILL.md                          # Skill 主文件
 ├── SKILL.patch.md                    # 演进记录
 ├── references/                       # 方法论、机制、检查清单、案例和 Golden Set
@@ -240,28 +240,28 @@ skill-optimizer/
 
 ```bash
 # macOS/Linux
-cp -r skill-optimizer ~/.codex/skills/
-cp -r amazon-ads-initialization ~/.codex/skills/
-cp -r wohu-amazon-skill-creator ~/.codex/skills/
+cp -r skills/skill-optimizer ~/.codex/skills/
+cp -r skills/amazon-ads-initialization ~/.codex/skills/
+cp -r skills/wohu-amazon-skill-creator ~/.codex/skills/
 
 # Windows PowerShell
-Copy-Item -Recurse skill-optimizer $env:USERPROFILE\.codex\skills\
-Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.codex\skills\
-Copy-Item -Recurse wohu-amazon-skill-creator $env:USERPROFILE\.codex\skills\
+Copy-Item -Recurse skills\skill-optimizer $env:USERPROFILE\.codex\skills\
+Copy-Item -Recurse skills\amazon-ads-initialization $env:USERPROFILE\.codex\skills\
+Copy-Item -Recurse skills\wohu-amazon-skill-creator $env:USERPROFILE\.codex\skills\
 ```
 
 ### 安装到 Claude Code
 
 ```bash
 # macOS/Linux
-cp -r skill-optimizer ~/.claude/skills/
-cp -r amazon-ads-initialization ~/.claude/skills/
-cp -r wohu-amazon-skill-creator ~/.claude/skills/
+cp -r skills/skill-optimizer ~/.claude/skills/
+cp -r skills/amazon-ads-initialization ~/.claude/skills/
+cp -r skills/wohu-amazon-skill-creator ~/.claude/skills/
 
 # Windows PowerShell
-Copy-Item -Recurse skill-optimizer $env:USERPROFILE\.claude\skills\
-Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.claude\skills\
-Copy-Item -Recurse wohu-amazon-skill-creator $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse skills\skill-optimizer $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse skills\amazon-ads-initialization $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse skills\wohu-amazon-skill-creator $env:USERPROFILE\.claude\skills\
 ```
 
 ## 推荐使用方式
