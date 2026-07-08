@@ -209,9 +209,20 @@ Copy-Item -Recurse amazon-ads-initialization $env:USERPROFILE\.claude\skills\
 - 涉及固定输出格式时，优先放到 `assets/` 模板中。
 - 每次实质性升级后，建议使用 `skill-optimizer` 重新体检并记录演进。
 
-## 微信公众号
+## 微信公众号与个人微信
 
-<img src="docs/images/wechat-official-account-qrcode.jpg" alt="微信公众号二维码" width="200" height="200" />
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/images/wechat-official-account-qrcode.jpg" alt="微信公众号二维码" width="200" height="200" /><br />
+      微信公众号
+    </td>
+    <td align="center">
+      <img src="docs/images/wechat-personal-qrcode.jpg" alt="个人微信二维码" width="200" height="200" /><br />
+      个人微信
+    </td>
+  </tr>
+</table>
 
 公众号内容聚焦 `亚马逊跨境电商 + AI` 的实战结合，持续分享两类内容：一类是围绕选品、广告、流量、内容生产、自动化提效等场景的深度文章；另一类是围绕 Codex、Claude Code、Amazon 运营工作流和相关工具链的开源项目发布、迭代记录与落地经验。
 
