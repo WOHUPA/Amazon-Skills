@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "2.6.0"
+  #define AppVersion "2.6.1"
 #endif
 #ifndef SourceExe
   #error SourceExe must point to the compiled CodexThemeStudio.exe

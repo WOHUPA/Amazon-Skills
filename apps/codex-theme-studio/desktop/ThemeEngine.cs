@@ -16,7 +16,7 @@ namespace CodexThemeStudio.Desktop
 {
     internal sealed class NativeThemeEngine : IDisposable
     {
-        private const string AppVersion = "2.6.0";
+        private const string AppVersion = "2.6.1";
         private const string CodexAppUserModelId = "OpenAI.Codex_2p2nqsd0c76g0!App";
         private readonly string stateRoot;
         private readonly string engineRoot;
@@ -97,6 +97,8 @@ namespace CodexThemeStudio.Desktop
                 string command = arguments != null && arguments.Length > 0 ? arguments[0].Trim().ToLowerInvariant() : string.Empty;
                 string value = arguments != null && arguments.Length > 1 ? arguments[1] : string.Empty;
                 if (command == "activate") Activate(value, cancellationToken, timeout);
+                else if (command == "set-background") SetBackground(value, arguments != null && arguments.Length > 2 ? arguments[2] : string.Empty, cancellationToken, timeout);
+                else if (command == "delete") DeleteTheme(value);
                 else if (command == "rollback") Rollback(cancellationToken, timeout);
                 else if (command == "pause") Pause(cancellationToken, timeout);
                 else if (command == "resume") Resume(cancellationToken, timeout);
@@ -213,6 +215,173 @@ namespace CodexThemeStudio.Desktop
             args.Add("--timeout-ms"); args.Add("30000");
             EngineCommandResult verify = RunNode(session.NodePath, args, cancellationToken, timeout);
             ThrowIfFailed(verify, "运行时验证失败");
+        }
+
+        private void SetBackground(string id, string sourcePath, CancellationToken cancellationToken, TimeSpan timeout)
+        {
+            string selected = ResolveSavedTheme(id);
+            string source = ValidateBackgroundSource(sourcePath);
+            string extension = GetBackgroundExtension(source);
+            string staging = Path.Combine(BackupsRoot, ".background-" + Guid.NewGuid().ToString("N"));
+            string savedBackup = Path.Combine(BackupsRoot, ".background-saved-" + Guid.NewGuid().ToString("N"));
+            string activeBackup = Path.Combine(BackupsRoot, ".background-active-" + Guid.NewGuid().ToString("N"));
+            bool isCurrent = string.Equals(ReadThemeId(ActiveThemeRoot), id, StringComparison.Ordinal);
+            bool releaseBackups = false;
+
+            try
+            {
+                CopyDirectory(selected, staging);
+                string assetsDirectory = Path.Combine(staging, "assets");
+                EnsureDirectory(assetsDirectory);
+                foreach (string oldFile in Directory.GetFiles(assetsDirectory, "local-background.*")) File.Delete(oldFile);
+
+                string relative = "assets/local-background" + extension;
+                File.Copy(source, Path.Combine(assetsDirectory, "local-background" + extension), true);
+                UpdateBackgroundMetadata(staging, relative);
+                ValidateTheme(staging, id);
+
+                ReplaceDirectoryCopy(selected, savedBackup);
+                if (isCurrent) ReplaceDirectoryCopy(ActiveThemeRoot, activeBackup);
+                try
+                {
+                    ReplaceDirectoryCopy(staging, selected);
+                    if (isCurrent)
+                    {
+                        ReplaceDirectoryCopy(staging, ActiveThemeRoot);
+                        if (!IsPaused)
+                        {
+                            LiveSession session = EnsureLiveSession(cancellationToken, timeout);
+                            EngineCommandResult apply = RunNode(session.NodePath, BuildApplyArguments(session), cancellationToken, timeout);
+                            ThrowIfFailed(apply, "更新背景失败");
+                        }
+                    }
+                    releaseBackups = true;
+                }
+                catch (Exception updateError)
+                {
+                    try
+                    {
+                        ReplaceDirectoryCopy(savedBackup, selected);
+                        if (isCurrent) ReplaceDirectoryCopy(activeBackup, ActiveThemeRoot);
+                        releaseBackups = true;
+                    }
+                    catch (Exception restoreError)
+                    {
+                        throw new InvalidOperationException(
+                            "背景更新失败且自动恢复未完成；原主题备份已保留在 " + savedBackup + "。",
+                            new AggregateException(updateError, restoreError));
+                    }
+                    if (isCurrent && !IsPaused)
+                    {
+                        try
+                        {
+                            LiveSession session = EnsureLiveSession(CancellationToken.None, TimeSpan.FromSeconds(30));
+                            RunNode(session.NodePath, BuildApplyArguments(session), CancellationToken.None, TimeSpan.FromSeconds(30));
+                        }
+                        catch { }
+                    }
+                    throw;
+                }
+            }
+            finally
+            {
+                DeleteDirectorySafe(staging);
+                if (releaseBackups)
+                {
+                    DeleteDirectorySafe(savedBackup);
+                    DeleteDirectorySafe(activeBackup);
+                }
+            }
+        }
+
+        private void DeleteTheme(string id)
+        {
+            string selected = ResolveSavedTheme(id);
+            if (string.Equals(ReadThemeId(ActiveThemeRoot), id, StringComparison.Ordinal))
+                throw new InvalidOperationException("当前正在使用的主题不能删除，请先切换到其他主题。");
+
+            string deletedRoot = Path.Combine(BackupsRoot, "deleted-themes");
+            EnsureDirectory(deletedRoot);
+            string archive = Path.Combine(deletedRoot, id + "-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + "-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            string previous = Path.Combine(BackupsRoot, "previous-theme");
+            string previousArchive = Path.Combine(archive, "previous-theme");
+            bool movedPrevious = false;
+
+            Directory.Move(selected, archive);
+            try
+            {
+                Dictionary<string, object> state = ReadState() ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                HashSet<string> deletedIds = GetDeletedThemeIds(state);
+                deletedIds.Add(id);
+                state["deletedThemeIds"] = deletedIds.OrderBy(delegate(string value) { return value; }, StringComparer.Ordinal).ToArray();
+                if (string.Equals(ReadThemeId(previous), id, StringComparison.Ordinal))
+                {
+                    Directory.Move(previous, previousArchive);
+                    movedPrevious = true;
+                    state["previousThemeId"] = string.Empty;
+                }
+                state["studioVersion"] = AppVersion;
+                WriteState(state);
+            }
+            catch
+            {
+                if (movedPrevious && Directory.Exists(previousArchive)) Directory.Move(previousArchive, previous);
+                if (!Directory.Exists(selected) && Directory.Exists(archive)) Directory.Move(archive, selected);
+                throw;
+            }
+        }
+
+        private string ValidateBackgroundSource(string sourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath)) throw new InvalidOperationException("请选择本地 PNG 或 JPEG 背景图片。");
+            string source = Path.GetFullPath(sourcePath);
+            if (!File.Exists(source)) throw new FileNotFoundException("背景图片不存在。", source);
+            if ((File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0) throw new IOException("背景图片不能是链接或重解析点。");
+            if (new FileInfo(source).Length > 80L * 1024L * 1024L) throw new InvalidDataException("背景图片不能超过 80 MB。");
+
+            using (System.Drawing.Image image = System.Drawing.Image.FromFile(source))
+            {
+                bool supported = image.RawFormat.Guid == System.Drawing.Imaging.ImageFormat.Png.Guid ||
+                    image.RawFormat.Guid == System.Drawing.Imaging.ImageFormat.Jpeg.Guid;
+                if (!supported) throw new InvalidDataException("背景图片必须是 PNG 或 JPEG 格式。");
+                double ratio = image.Width / (double)image.Height;
+                if (image.Width < 1600 || image.Height < 900 || Math.Abs(ratio - (16.0 / 9.0)) > 0.03)
+                    throw new InvalidDataException("背景图片必须至少为 1600×900，并接近 16:9。");
+                if (image.Width > 7680 || image.Height > 4320)
+                    throw new InvalidDataException("背景图片最大支持 7680×4320。");
+            }
+            return source;
+        }
+
+        private static string GetBackgroundExtension(string source)
+        {
+            using (System.Drawing.Image image = System.Drawing.Image.FromFile(source))
+            {
+                return image.RawFormat.Guid == System.Drawing.Imaging.ImageFormat.Png.Guid ? ".png" : ".jpg";
+            }
+        }
+
+        private void UpdateBackgroundMetadata(string themeDirectory, string relativePath)
+        {
+            string metadataPath = Path.Combine(themeDirectory, "theme.json");
+            Dictionary<string, object> metadata = serializer.DeserializeObject(File.ReadAllText(metadataPath, Encoding.UTF8)) as Dictionary<string, object>;
+            if (metadata == null) throw new InvalidDataException("theme.json 不是有效对象。");
+            Dictionary<string, object> assets = metadata.ContainsKey("assets") ? metadata["assets"] as Dictionary<string, object> : null;
+            if (assets == null) throw new InvalidDataException("theme.json 缺少 assets 对象。");
+            string oldHome = assets.ContainsKey("homeBackground") ? Convert.ToString(assets["homeBackground"]) : string.Empty;
+            string oldTask = assets.ContainsKey("taskBackground") ? Convert.ToString(assets["taskBackground"]) : string.Empty;
+            assets["homeBackground"] = relativePath;
+            assets["taskBackground"] = relativePath;
+            WriteUtf8Atomic(metadataPath, serializer.Serialize(metadata) + Environment.NewLine);
+
+            string previewPath = Path.Combine(themeDirectory, "preview.html");
+            if (File.Exists(previewPath))
+            {
+                string preview = File.ReadAllText(previewPath, Encoding.UTF8);
+                if (!string.IsNullOrEmpty(oldHome)) preview = preview.Replace(oldHome, relativePath);
+                if (!string.IsNullOrEmpty(oldTask)) preview = preview.Replace(oldTask, relativePath);
+                WriteUtf8Atomic(previewPath, preview);
+            }
         }
 
         private LiveSession EnsureLiveSession(CancellationToken cancellationToken, TimeSpan timeout)
@@ -584,10 +753,12 @@ namespace CodexThemeStudio.Desktop
         {
             string presets = Path.Combine(engineRoot, "presets");
             if (!Directory.Exists(presets)) return;
+            HashSet<string> deletedIds = GetDeletedThemeIds(ReadState());
             foreach (string preset in Directory.GetDirectories(presets))
             {
                 string metadata = Path.Combine(preset, "theme.json");
                 if (!File.Exists(metadata)) continue;
+                if (deletedIds.Contains(Path.GetFileName(preset))) continue;
                 string destination = Path.Combine(ThemesRoot, Path.GetFileName(preset));
                 if (!Directory.Exists(destination)) CopyDirectory(preset, destination);
             }
@@ -671,6 +842,20 @@ namespace CodexThemeStudio.Desktop
                 return serializer.DeserializeObject(File.ReadAllText(StatePath, Encoding.UTF8)) as Dictionary<string, object>;
             }
             catch { return null; }
+        }
+
+        private static HashSet<string> GetDeletedThemeIds(Dictionary<string, object> state)
+        {
+            HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
+            if (state == null || !state.ContainsKey("deletedThemeIds")) return ids;
+            Array values = state["deletedThemeIds"] as Array;
+            if (values == null) return ids;
+            foreach (object value in values)
+            {
+                string id = Convert.ToString(value);
+                if (!string.IsNullOrWhiteSpace(id)) ids.Add(id);
+            }
+            return ids;
         }
 
         private void WriteState(Dictionary<string, object> state)

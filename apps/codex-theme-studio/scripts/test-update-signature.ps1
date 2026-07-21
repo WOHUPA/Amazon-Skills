@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$AppVersion = '2.6.0',
+  [string]$AppVersion = '2.6.1',
   [string]$InstallerPath,
   [string]$ManifestPath
 )

@@ -54,7 +54,7 @@ Codex Theme Studio 2.6 起以 WiX MSI 为 Windows 主安装包。MSI 使用稳�
 winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --accept-package-agreements
 
 .\scripts\build-windows-installer.ps1 `
-  -AppVersion 2.6.0 `
+  -AppVersion 2.6.1 `
   -GitHubRepository WOHUPA/Amazon-Skills `
   -UpdateReleaseTag codex-theme-studio-latest `
   -SignMode None
@@ -64,11 +64,11 @@ winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --ac
 
 ```powershell
 .\scripts\new-update-manifest.ps1 `
-  -Version 2.6.0 `
+  -Version 2.6.1 `
   -Repository WOHUPA/Amazon-Skills `
   -ReleaseTagPrefix codex-theme-studio-v `
-  -InstallerPath .\dist\Codex-Theme-Studio-2.6.0-Windows-x64.msi `
-  -BridgeInstallerPath .\dist\Codex-Theme-Studio-Setup-2.6.0.exe `
+  -InstallerPath .\dist\Codex-Theme-Studio-2.6.1-Windows-x64.msi `
+  -BridgeInstallerPath .\dist\Codex-Theme-Studio-Setup-2.6.1.exe `
   -SecretKeyPath <private-minisign-key>
 ```
 

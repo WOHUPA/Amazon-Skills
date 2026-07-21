@@ -34,11 +34,15 @@ winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --ac
 
 ```powershell
 CodexThemeStudio.exe --engine activate --theme immersive-dark --result-file result.json
+CodexThemeStudio.exe --engine set-background --theme immersive-dark --image C:\Pictures\theme.jpg --result-file result.json
+CodexThemeStudio.exe --engine delete --theme clear-light --result-file result.json
 CodexThemeStudio.exe --engine verify --result-file result.json
 CodexThemeStudio.exe --engine rollback --result-file result.json
 ```
 
-客户端“创建新主题”按钮会复制精确的 `$codex-theme-generator` 提示词并打开官方 Codex。当前没有使用未经验证的提示词深链，因此用户需要在新任务中粘贴该提示词；生成完成后由选择器执行导入，激活仍需单独确认。
+客户端“创建新主题”按钮会复制精确的 `$codex-theme-generator` 提示词并打开官方 Codex。当前没有使用未经验证的提示词深链，因此用户需要在新任务中粘贴该提示词；提示词会优先收集本地参考图与高质量背景方向，生成完成后由选择器执行导入，激活仍需单独确认。
+
+主题详情支持选择本地 PNG/JPEG 作为首页与任务页背景。图片必须至少 1600×900、接近 16:9，最大 7680×4320。非当前主题可在二次确认后删除；客户端会把删除内容保留在 `%LOCALAPPDATA%\CodexThemeStudio\backups\deleted-themes`，当前正在使用的主题不能删除。
 
 `pause`/`restore` 实时卸下主题并显示官方外观，同时保留运行时和主题；完整清理由 Windows 卸载程序负责。高级布局只来自精确 Codex 版本的宿主矩阵；版本未知时降级 `native` 并报告 `BLOCKED`，结构签名漂移时报告 `PARTIAL`。两种状态都不会通过验证或发布门禁。
 

@@ -14,15 +14,15 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("Codex Theme Studio")]
 [assembly: AssemblyProduct("Codex Theme Studio")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("2.6.0.0")]
-[assembly: AssemblyFileVersion("2.6.0.0")]
-[assembly: AssemblyInformationalVersion("2.6.0")]
+[assembly: AssemblyVersion("2.6.1.0")]
+[assembly: AssemblyFileVersion("2.6.1.0")]
+[assembly: AssemblyInformationalVersion("2.6.1")]
 
 namespace CodexThemeStudio.Desktop
 {
     internal static class Program
     {
-        private const string AppVersion = "2.6.0";
+        private const string AppVersion = "2.6.1";
         private const string RuntimeResource = "CodexThemeStudio.Runtime.zip";
         private static readonly string StateRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -131,10 +131,14 @@ namespace CodexThemeStudio.Desktop
         private static int RunEngineCommand(string[] args, string command)
         {
             string themeId = GetArgumentValue(args, "--theme");
+            string imagePath = GetArgumentValue(args, "--image");
             string resultPath = GetArgumentValue(args, "--result-file");
-            string[] engineArguments = string.Equals(command, "activate", StringComparison.OrdinalIgnoreCase)
-                ? new[] { command, themeId }
-                : new[] { command };
+            string[] engineArguments;
+            if (string.Equals(command, "activate", StringComparison.OrdinalIgnoreCase) || string.Equals(command, "delete", StringComparison.OrdinalIgnoreCase))
+                engineArguments = new[] { command, themeId };
+            else if (string.Equals(command, "set-background", StringComparison.OrdinalIgnoreCase))
+                engineArguments = new[] { command, themeId, imagePath };
+            else engineArguments = new[] { command };
 
             EngineCommandResult result;
             using (NativeThemeEngine engine = new NativeThemeEngine(StateRoot, EngineRoot))

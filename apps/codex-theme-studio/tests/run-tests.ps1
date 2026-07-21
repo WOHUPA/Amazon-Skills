@@ -30,6 +30,10 @@ if (-not (Test-Path -LiteralPath $createPrompt -PathType Leaf) -or
   -not (Get-Content -Raw -LiteralPath $createPrompt -Encoding UTF8).StartsWith('$codex-theme-generator ')) {
   throw 'Theme Studio create-theme prompt is missing or invalid.'
 }
+$createPromptSource = Get-Content -Raw -LiteralPath $createPrompt -Encoding UTF8
+if ($createPromptSource -notmatch '背景质量优先' -or $createPromptSource -notmatch '本地参考') {
+  throw 'Theme Studio create-theme prompt does not collect high-quality local background input.'
+}
 $lightCover = Join-Path $Root 'assets\theme-covers\clear-light.png'
 if (-not (Test-Path -LiteralPath $lightCover -PathType Leaf) -or (Get-Item -LiteralPath $lightCover).Length -lt 100000) {
   throw 'Theme Studio light-theme editorial cover is missing or invalid.'
@@ -40,6 +44,12 @@ $updateSource = Get-Content -Raw -LiteralPath $updateSourcePath
 $nativeEngineSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'desktop\ThemeEngine.cs')
 if ($guiSource -notmatch 'CreateThemeButton' -or $nativeClientSource -notmatch 'OpenThemeGenerator') {
   throw 'Theme Studio create-theme handoff is missing.'
+}
+if ($guiSource -notmatch 'HeroBackgroundButton' -or $guiSource -notmatch 'HeroDeleteButton' -or
+    $nativeClientSource -notmatch 'ChooseLocalBackground' -or $nativeClientSource -notmatch 'DeleteSelectedTheme' -or
+    $nativeEngineSource -notmatch 'SetBackground' -or $nativeEngineSource -notmatch 'DeleteTheme' -or
+    $nativeEngineSource -notmatch 'deletedThemeIds') {
+  throw 'Theme Studio local background or recoverable theme deletion flow is incomplete.'
 }
 if ($nativeClientSource -notmatch 'CancellationTokenSource' -or
     $nativeClientSource -notmatch 'ExecuteEngineAsync' -or
@@ -161,6 +171,24 @@ if ($cliSource -notmatch 'CodexThemeStudio\.exe' -or $cliSource -match 'shortcut
 foreach ($test in @('renderer-inject.test.mjs','visual-contract.test.mjs','host-adapter-fixture.test.mjs','injector-bootstrap.test.mjs','injector-one-shot.test.mjs','image-metadata.test.mjs')) {
   & $node.Path (Join-Path $PSScriptRoot $test)
   if ($LASTEXITCODE -ne 0) { throw "Node test failed: $test" }
+}
+
+$harnessRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-theme-management-build-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $harnessRoot | Out-Null
+try {
+  $harnessExe = Join-Path $harnessRoot 'ThemeManagementHarness.exe'
+  $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+  & $csc '/nologo' '/target:exe' "/out:$harnessExe" `
+    '/reference:System.dll' '/reference:System.Core.dll' '/reference:System.Drawing.dll' '/reference:System.Web.Extensions.dll' `
+    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $PSScriptRoot 'ThemeManagementHarness.cs')
+  if ($LASTEXITCODE -ne 0) { throw 'Theme management harness compilation failed.' }
+  & $harnessExe
+  if ($LASTEXITCODE -ne 0) { throw 'Theme management harness failed.' }
+} finally {
+  $resolvedHarness = [System.IO.Path]::GetFullPath($harnessRoot)
+  $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+  if (-not $resolvedHarness.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Refusing unsafe harness cleanup.' }
+  [System.IO.Directory]::Delete($resolvedHarness, $true)
 }
 
 $pythonCommand = Get-Command python -ErrorAction Stop

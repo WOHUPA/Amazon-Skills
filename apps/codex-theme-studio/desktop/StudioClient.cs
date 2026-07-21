@@ -39,7 +39,7 @@ namespace CodexThemeStudio.Desktop
 
     internal sealed class StudioClient : IDisposable
     {
-        private const string AppVersion = "2.6.0";
+        private const string AppVersion = "2.6.1";
         private readonly string stateRoot;
         private readonly string engineRoot;
         private readonly NativeThemeEngine engine;
@@ -80,6 +80,8 @@ namespace CodexThemeStudio.Desktop
         private TextBlock heroDescription;
         private Button heroApplyButton;
         private Button heroPreviewButton;
+        private Button heroBackgroundButton;
+        private Button heroDeleteButton;
         private TextBlock themeCountLabel;
         private ScrollViewer themeScroll;
         private StackPanel themeStrip;
@@ -152,6 +154,7 @@ namespace CodexThemeStudio.Desktop
             allFilter = Find<Button>("AllFilter"); darkFilter = Find<Button>("DarkFilter"); lightFilter = Find<Button>("LightFilter");
             heroContent = Find<Grid>("HeroContent"); heroImage = Find<Image>("HeroImage"); heroName = Find<TextBlock>("HeroName");
             heroMeta = Find<TextBlock>("HeroMeta"); heroDescription = Find<TextBlock>("HeroDescription"); heroApplyButton = Find<Button>("HeroApplyButton"); heroPreviewButton = Find<Button>("HeroPreviewButton");
+            heroBackgroundButton = Find<Button>("HeroBackgroundButton"); heroDeleteButton = Find<Button>("HeroDeleteButton");
             themeCountLabel = Find<TextBlock>("ThemeCountLabel"); themeScroll = Find<ScrollViewer>("ThemeScroll"); themeStrip = Find<StackPanel>("ThemeStrip");
             scrollLeftButton = Find<Button>("ScrollLeftButton"); scrollRightButton = Find<Button>("ScrollRightButton");
             activityDock = Find<Border>("ActivityDock"); busyBar = Find<ProgressBar>("BusyBar"); operationTitle = Find<TextBlock>("OperationTitle"); progressText = Find<TextBlock>("ProgressText"); cancelOperationButton = Find<Button>("CancelOperationButton");
@@ -198,6 +201,8 @@ namespace CodexThemeStudio.Desktop
             scrollRightButton.Click += delegate { themeScroll.ScrollToHorizontalOffset(themeScroll.HorizontalOffset + 444); };
             heroApplyButton.Click += delegate { if (selectedTheme != null) RunAction("正在应用 " + selectedTheme.Name, "activate", selectedTheme.Id, "-RestartExisting"); };
             heroPreviewButton.Click += delegate { ShowPreview(); };
+            heroBackgroundButton.Click += delegate { ChooseLocalBackground(); };
+            heroDeleteButton.Click += delegate { DeleteSelectedTheme(); };
             createThemeButton.Click += delegate { OpenThemeGenerator(); };
             cancelOperationButton.Click += delegate { CancelOperation(); };
             pauseButton.Click += delegate { RunAction("正在暂停主题", "pause"); };
@@ -278,9 +283,10 @@ namespace CodexThemeStudio.Desktop
 
         private void LoadThemes()
         {
+            string selectedId = selectedTheme == null ? string.Empty : selectedTheme.Id;
             themes.Clear();
             string themeRoot = Path.Combine(stateRoot, "themes");
-            if (!Directory.Exists(themeRoot)) return;
+            if (!Directory.Exists(themeRoot)) { selectedTheme = null; return; }
             foreach (string directory in Directory.GetDirectories(themeRoot))
             {
                 string themeJson = Path.Combine(directory, "theme.json");
@@ -310,6 +316,7 @@ namespace CodexThemeStudio.Desktop
                 }
                 catch { }
             }
+            selectedTheme = themes.FirstOrDefault(delegate(ThemeItem item) { return string.Equals(item.Id, selectedId, StringComparison.Ordinal); });
         }
 
         private static Dictionary<string, object> Object(Dictionary<string, object> data, string key)
@@ -440,6 +447,8 @@ namespace CodexThemeStudio.Desktop
             bool current = item.Id == currentThemeId;
             heroApplyButton.Content = current ? "正在使用" : "应用主题";
             heroApplyButton.IsEnabled = !current && operationCancellation == null;
+            heroBackgroundButton.IsEnabled = operationCancellation == null;
+            heroDeleteButton.IsEnabled = !current && operationCancellation == null;
         }
 
         private void ShowPage(string page)
@@ -458,7 +467,7 @@ namespace CodexThemeStudio.Desktop
         private void SetBusy(bool busy, string label)
         {
             activityDock.Visibility = busy ? Visibility.Visible : Visibility.Collapsed; operationTitle.Text = label;
-            foreach (Button button in new[] { createThemeButton, heroApplyButton, pauseButton, resumeButton, runtimeVerifyButton, rollbackButton, restoreButton }) button.IsEnabled = !busy;
+            foreach (Button button in new[] { createThemeButton, heroApplyButton, heroBackgroundButton, heroDeleteButton, pauseButton, resumeButton, runtimeVerifyButton, rollbackButton, restoreButton }) button.IsEnabled = !busy;
             if (busy) { busyBar.Value = 4; progressText.Text = " · 4%"; cancelOperationButton.IsEnabled = true; }
             else SetHero(selectedTheme);
         }
@@ -474,7 +483,8 @@ namespace CodexThemeStudio.Desktop
             if (operationCancellation != null) return;
             if (arguments != null && arguments.Length > 0 &&
                 (string.Equals(arguments[0], "activate", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(arguments[0], "resume", StringComparison.OrdinalIgnoreCase)) &&
+                 string.Equals(arguments[0], "resume", StringComparison.OrdinalIgnoreCase) ||
+                 (string.Equals(arguments[0], "set-background", StringComparison.OrdinalIgnoreCase) && arguments.Length > 1 && string.Equals(arguments[1], currentThemeId, StringComparison.Ordinal))) &&
                 engine.RequiresCodexRestart())
             {
                 MessageBoxResult restart = System.Windows.MessageBox.Show(
@@ -494,7 +504,11 @@ namespace CodexThemeStudio.Desktop
                     throw new InvalidOperationException(detail.Length == 0 ? label + "失败，退出代码 " + result.ExitCode + "。" : detail);
                 }
                 busyBar.Value = 100; progressText.Text = " · 100%";
+                string command = arguments != null && arguments.Length > 0 ? arguments[0] : string.Empty;
+                if (command == "set-background" || command == "delete") LoadThemes();
                 RefreshState();
+                if (command == "set-background") System.Windows.MessageBox.Show("本地背景已保存，并同时用于首页与任务页。", "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (command == "delete") System.Windows.MessageBox.Show("主题已从主题库删除，并保留了本地可恢复备份。", "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException) { }
             catch (TimeoutException ex) { System.Windows.MessageBox.Show(ex.Message, "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Warning); }
@@ -526,6 +540,36 @@ namespace CodexThemeStudio.Desktop
             Grid grid = new Grid(); Image image = new Image { Source = LoadBitmap(selectedTheme.BackgroundPath), Stretch = Stretch.UniformToFill }; grid.Children.Add(image);
             Border panel = new Border { Width = 420, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(38), Padding = new Thickness(28), CornerRadius = new CornerRadius(16), Background = Brush("#E6121418") };
             StackPanel stack = new StackPanel(); stack.Children.Add(new TextBlock { Text = selectedTheme.Name, FontSize = 30, Foreground = Brush("#F4DFC1"), Margin = new Thickness(0, 0, 0, 14) }); stack.Children.Add(new TextBlock { Text = selectedTheme.Id, FontSize = 12, Foreground = Brush("#B8B0A6") }); panel.Child = stack; grid.Children.Add(panel); preview.Content = grid; preview.ShowDialog();
+        }
+
+        private void ChooseLocalBackground()
+        {
+            if (selectedTheme == null) return;
+            Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "选择本地主题背景",
+                Filter = "PNG 或 JPEG 图片|*.png;*.jpg;*.jpeg",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+            if (dialog.ShowDialog(window) != true) return;
+            RunAction("正在更新 " + selectedTheme.Name + " 的背景", "set-background", selectedTheme.Id, dialog.FileName);
+        }
+
+        private void DeleteSelectedTheme()
+        {
+            if (selectedTheme == null) return;
+            if (string.Equals(selectedTheme.Id, currentThemeId, StringComparison.Ordinal))
+            {
+                System.Windows.MessageBox.Show("当前正在使用的主题不能删除，请先切换到其他主题。", "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            MessageBoxResult choice = System.Windows.MessageBox.Show(
+                "确定删除主题“" + selectedTheme.Name + "”吗？\n\n主题会从列表移除，并保留一份本地可恢复备份。",
+                "删除主题",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (choice == MessageBoxResult.Yes) RunAction("正在删除 " + selectedTheme.Name, "delete", selectedTheme.Id);
         }
 
         private void OpenThemeGenerator()
