@@ -1,0 +1,73 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Resolve release version
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Restore Minisign release key
+        shell: pwsh
+        env:
+          MINISIGN_SECRET_KEY_BASE64: ${{ secrets.MINISIGN_SECRET_KEY_BASE64 }}
+        run: |
+          if (-not $env:MINISIGN_SECRET_KEY_BASE64) { throw 'MINISIGN_SECRET_KEY_BASE64 is required for public releases.' }
+          $keyPath = Join-Path $env:RUNNER_TEMP 'codex-theme-studio-minisign.key'
+          [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($env:MINISIGN_SECRET_KEY_BASE64))
+          "MINISIGN_SECRET_KEY_PATH=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build unsigned Windows installer
+        shell: pwsh
+        run: |
+          .\scripts\build-windows-installer.ps1 `
+            -AppVersion $env:RELEASE_VERSION `
+            -GitHubRepository '${{ github.repository }}' `
+            -SignMode None
+
+      - name: Sign updater artifact and create manifest
+        shell: pwsh
+        run: |
+          .\scripts\new-update-manifest.ps1 `
+            -Version $env:RELEASE_VERSION `
+            -Repository '${{ github.repository }}' `
+            -InstallerPath ".\dist\Codex-Theme-Studio-Setup-$env:RELEASE_VERSION.exe" `
+            -SecretKeyPath $env:MINISIGN_SECRET_KEY_PATH `
+            -Notes "Codex Theme Studio $env:RELEASE_VERSION"
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$env:RELEASE_VERSION" `
+            ".\dist\Codex-Theme-Studio-Setup-$env:RELEASE_VERSION.exe" `
+            ".\dist\Codex-Theme-Studio-Setup-$env:RELEASE_VERSION.exe.minisig" `
+            ".\dist\latest.json" `
+            --title "Codex Theme Studio $env:RELEASE_VERSION" `
+            --generate-notes
+
+      - name: Remove release key
+        if: always()
+        shell: pwsh
+        run: |
+          if ($env:MINISIGN_SECRET_KEY_PATH -and (Test-Path -LiteralPath $env:MINISIGN_SECRET_KEY_PATH)) {
+            [IO.File]::Delete($env:MINISIGN_SECRET_KEY_PATH)
+          }

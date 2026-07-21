@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "artifactSuffixes": ["png", "rects.json", "styles.json", "contrast.json"],
+  "semanticStateRequirements": {
+    "button": ["default", "hover", "focus", "pressed", "disabled", "icon-text"],
+    "menu": ["open", "hover", "selected", "disabled", "submenu"],
+    "composer": ["empty", "multiline", "attachment", "send-enabled", "send-disabled", "streaming-stop"],
+    "sidebar": ["expanded", "collapsed", "narrow", "zoomed"],
+    "overlay": ["dialog", "tooltip", "toast", "error"]
+  },
+  "sceneStateRequirements": {
+    "home": {
+      "button": ["default", "hover", "focus", "pressed", "disabled", "icon-text"],
+      "composer": ["empty", "send-disabled"],
+      "sidebar": ["expanded"]
+    },
+    "task": {
+      "button": ["default", "focus", "icon-text"],
+      "composer": ["multiline", "attachment", "send-enabled", "send-disabled", "streaming-stop"],
+      "sidebar": ["expanded"]
+    },
+    "project-menu": {
+      "menu": ["open", "hover", "selected", "disabled", "submenu"]
+    },
+    "app-menu": {
+      "menu": ["open", "hover", "selected", "disabled", "submenu"]
+    },
+    "dialog": {
+      "button": ["default", "focus", "disabled"],
+      "overlay": ["dialog", "tooltip", "toast", "error"]
+    },
+    "task-sidebar": {
+      "sidebar": ["expanded", "collapsed", "narrow", "zoomed"]
+    }
+  },
+  "profiles": {
+    "pr": {
+      "themes": ["immersive-dark", "clear-light", "obsidian-gold"],
+      "scenes": ["home", "task", "project-menu", "app-menu", "dialog", "task-sidebar"],
+      "variants": [
+        {"id": "narrow-100", "viewport": "narrow", "width": 960, "height": 720, "dpi": 100},
+        {"id": "narrow-125", "viewport": "narrow", "width": 960, "height": 720, "dpi": 125},
+        {"id": "narrow-150", "viewport": "narrow", "width": 960, "height": 720, "dpi": 150},
+        {"id": "standard-100", "viewport": "standard", "width": 1280, "height": 820, "dpi": 100},
+        {"id": "standard-125", "viewport": "standard", "width": 1280, "height": 820, "dpi": 125},
+        {"id": "standard-150", "viewport": "standard", "width": 1280, "height": 820, "dpi": 150},
+        {"id": "wide-100", "viewport": "wide", "width": 1728, "height": 1080, "dpi": 100},
+        {"id": "wide-125", "viewport": "wide", "width": 1728, "height": 1080, "dpi": 125},
+        {"id": "wide-150", "viewport": "wide", "width": 1728, "height": 1080, "dpi": 150}
+      ]
+    },
+    "release": {
+      "themes": [
+        "immersive-dark", "clear-light", "obsidian-gold",
+        "doupo-cai-lin-heaven-python", "doupo-medusa-green-lotus-evolution",
+        "doupo-nalan-dazzling-sunset", "doupo-qing-lin-triple-pupils",
+        "doupo-xiao-yan-flame-lotus", "doupo-xiao-yixian-poison-world",
+        "doupo-xun-er-emperor-seal", "doupo-yun-yun-fallen-massacre",
+        "doupo-zi-yan-dragon-sword"
+      ],
+      "scenes": ["home", "task"],
+      "variants": [
+        {"id": "standard-100", "viewport": "standard", "width": 1280, "height": 820, "dpi": 100}
+      ]
+    }
+  }
+}

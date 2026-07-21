@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-xiao-yan-inferno",
+  "name": "萧炎·异火炫彩",
+  "image": "background.jpg",
+  "appearance": "dark",
+  "art": {
+    "focusX": 0.74,
+    "focusY": 0.38,
+    "safeArea": "left",
+    "taskMode": "ambient"
+  },
+  "palette": {
+    "accent": "#d9782d"
+  }
+}

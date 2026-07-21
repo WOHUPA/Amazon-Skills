@@ -1,0 +1,15 @@
+{
+  "version": 3,
+  "cases": [
+    {"id": 1, "mode": "contract", "name": "完整深色主题"},
+    {"id": 2, "mode": "contract", "name": "双模式主题"},
+    {"id": 3, "mode": "contract", "name": "实验布局只读检测"},
+    {"id": 4, "mode": "contract", "name": "三层职责分离"},
+    {"id": 5, "mode": "contract", "name": "切换反例"},
+    {"id": 6, "mode": "contract", "name": "旧主题迁移反例"},
+    {"id": 7, "mode": "contract", "name": "官方模式反例"},
+    {"id": 8, "mode": "contract", "name": "安全失败关闭"},
+    {"id": 9, "mode": "contract", "name": "静态与运行状态分离"},
+    {"id": 10, "mode": "contract", "name": "原生主题编译"}
+  ]
+}

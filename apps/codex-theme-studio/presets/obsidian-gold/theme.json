@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "obsidian-gold",
+  "name": "曜石鎏金",
+  "appearance": "dark",
+  "assets": {
+    "homeBackground": "assets/home-background.jpg",
+    "taskBackground": "assets/task-background.jpg",
+    "icons": {
+      "attach": "assets/icons/attach.svg",
+      "history": "assets/icons/history.svg",
+      "newTask": "assets/icons/newTask.svg",
+      "projects": "assets/icons/projects.svg",
+      "search": "assets/icons/search.svg",
+      "send": "assets/icons/send.svg",
+      "settings": "assets/icons/settings.svg",
+      "skills": "assets/icons/skills.svg"
+    }
+  },
+  "palette": {
+    "accent": "#D7AE55",
+    "accentContrast": "#000000",
+    "canvas": "#080807",
+    "surface": "#171510",
+    "surfaceElevated": "#242016",
+    "text": "#FFF8E7",
+    "textMuted": "#C7B993",
+    "border": "#5B4C27",
+    "menu": "#12100C",
+    "panel": "#18150E",
+    "composer": "#201B11",
+    "dialog": "#292116"
+  },
+  "materials": {
+    "panelOpacity": 0.62,
+    "composerOpacity": 0.72,
+    "dialogOpacity": 0.8,
+    "radius": 12,
+    "shadow": "strong",
+    "blur": 10
+  },
+  "layout": {
+    "mode": "native",
+    "sidebarWidth": 240,
+    "contentMaxWidth": 920,
+    "composerOffset": 0,
+    "density": "comfortable"
+  },
+  "art": {
+    "focusX": 0.7,
+    "focusY": 0.4,
+    "safeArea": "left",
+    "homeIntensity": 0.9,
+    "taskIntensity": 0.26
+  },
+  "compatibility": {
+    "codexMinVersion": "26.715",
+    "rendererFingerprint": "codex-theme-studio-v2",
+    "generatorVersion": "2.2.0"
+  },
+  "provenance": {
+    "generator": "codex-theme-generator",
+    "source": "provided",
+    "template": "obsidian-gold"
+  }
+}

@@ -52,6 +52,15 @@ Amazon Skills 是一组面向 Amazon 运营、广告投放和 Skill 工程化的
 | [`amazon-ads-initialization`](skills/amazon-ads-initialization/) | Amazon 新品广告初始化方案 | 新品 launch、广告结构设计、预算与关键词规划 |
 | [`skill-optimizer`](skills/skill-optimizer/) | Skill 体检、优化和回归治理 | Skill 不触发、触发打架、输出不稳定、需要系统升级 |
 | [`wohu-amazon-skill-creator`](skills/wohu-amazon-skill-creator/) | 亚马逊运营 Skill 创建、优化、审查和评测 | 把运营 SOP、内容流程或工具方法沉淀为可复用 Skill |
+| [`codex-theme-generator`](skills/codex-theme-generator/) | 生成并静态验证纯数据 Theme Pack v2 | 创建 Codex Desktop 深色、浅色或双模式主题 |
+
+## Codex Theme Studio
+
+[`apps/codex-theme-studio`](apps/codex-theme-studio/) 是独立 Windows 客户端、安装器和主题运行时。它负责导入、预览、激活、回退、验证以及持续升级；`codex-theme-generator` 只生成主题包，不携带客户端，`codex-theme-selector` 只代理已安装客户端 CLI。
+
+Windows 安装包通过本仓库的版本化 GitHub Release 分发，自动更新使用固定 `codex-theme-studio-latest` 通道、SHA-256 与 Minisign/Ed25519 签名。当前无 Authenticode 证书，Windows 可能显示“未知发布者”，但客户端不会接受缺少正确更新私钥的升级包。
+
+源码和构建说明见 [`apps/codex-theme-studio/README.md`](apps/codex-theme-studio/README.md)。
 
 ## wohu-amazon-skill-creator
 

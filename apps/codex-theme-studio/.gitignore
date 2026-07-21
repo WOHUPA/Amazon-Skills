@@ -1,0 +1,9 @@
+/build/
+/dist/*.exe
+/dist/latest.json
+/assets/studio.ico
+*.pfx
+*.p12
+*.snk
+*.key
+artifact-signing-metadata.json

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex 主题生成器"
+  short_description: "只生成并静态验证安全 Theme Pack v2"
+  default_prompt: "Use $codex-theme-generator to create and statically validate a native-safe Theme Pack v2 and its codex-theme-v1 payload, then report an import handoff without installing, importing, or activating Codex Theme Studio."
+policy:
+  allow_implicit_invocation: true

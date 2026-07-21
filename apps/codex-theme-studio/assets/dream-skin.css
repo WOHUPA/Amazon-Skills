@@ -1,0 +1,449 @@
+#codex-dream-skin-chrome {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+html.codex-dream-skin {
+  color-scheme: light;
+  --dream-art-position: 72% 45%;
+  --dream-accent: oklch(0.72 0.13 350);
+  --dream-accent-ink: rgb(255 255 255);
+  --dream-canvas: oklch(0.96 0.018 335);
+  --dream-glass-panel: oklch(0.985 0.012 335 / 0.46);
+  --dream-glass-dialog: oklch(0.995 0.008 335 / 0.54);
+  --dream-reading-surface: oklch(0.96 0.018 335 / 0.9);
+  --dream-panel-filter: none;
+  --dream-dialog-filter: none;
+  --dream-surface: var(--dream-glass-panel);
+  --dream-surface-raised: var(--dream-glass-dialog);
+  --dream-sidebar: var(--dream-glass-panel);
+  --dream-header: var(--dream-glass-panel);
+  --dream-text: oklch(0.26 0.026 335);
+  --dream-muted: oklch(0.48 0.035 335);
+  --dream-line: color-mix(in oklab, var(--dream-accent) 24%, transparent);
+  --dream-line-soft: color-mix(in oklab, var(--dream-accent) 13%, transparent);
+  --dream-accent-soft: color-mix(in oklab, var(--dream-accent) 13%, transparent);
+  --dream-accent-hover: color-mix(in oklab, var(--dream-accent) 20%, transparent);
+  --dream-window-wash: linear-gradient(90deg,
+    color-mix(in oklab, var(--dream-canvas) 66%, transparent),
+    color-mix(in oklab, var(--dream-canvas) 36%, transparent) 58%,
+    color-mix(in oklab, var(--dream-canvas) 12%, transparent));
+  --dream-shadow: 0 12px 36px color-mix(in oklab, var(--dream-accent) 9%, transparent);
+}
+
+html.codex-dream-skin.dream-theme-dark {
+  color-scheme: dark;
+  --dream-canvas: oklch(0.16 0.018 285);
+  --dream-glass-panel: oklch(0.17 0.02 285 / 0.38);
+  --dream-glass-dialog: oklch(0.21 0.02 285 / 0.46);
+  --dream-reading-surface: oklch(0.16 0.018 285 / 0.84);
+  --dream-text: oklch(0.94 0.012 285);
+  --dream-muted: oklch(0.72 0.024 285);
+  --dream-line: color-mix(in oklab, var(--dream-accent) 30%, transparent);
+  --dream-line-soft: color-mix(in oklab, var(--dream-accent) 17%, transparent);
+  --dream-accent-soft: color-mix(in oklab, var(--dream-accent) 17%, transparent);
+  --dream-accent-hover: color-mix(in oklab, var(--dream-accent) 25%, transparent);
+  --dream-window-wash: linear-gradient(90deg,
+    color-mix(in oklab, var(--dream-canvas) 72%, transparent),
+    color-mix(in oklab, var(--dream-canvas) 44%, transparent) 58%,
+    color-mix(in oklab, var(--dream-canvas) 18%, transparent));
+  --dream-shadow: 0 14px 42px color-mix(in oklab, rgb(0 0 0) 34%, transparent);
+}
+
+html.codex-dream-skin.dream-safe-right {
+  --dream-window-wash: linear-gradient(270deg,
+    color-mix(in oklab, var(--dream-canvas) 66%, transparent),
+    color-mix(in oklab, var(--dream-canvas) 36%, transparent) 58%,
+    color-mix(in oklab, var(--dream-canvas) 12%, transparent));
+}
+
+html.codex-dream-skin.dream-theme-dark.dream-safe-right {
+  --dream-window-wash: linear-gradient(270deg,
+    color-mix(in oklab, var(--dream-canvas) 72%, transparent),
+    color-mix(in oklab, var(--dream-canvas) 44%, transparent) 58%,
+    color-mix(in oklab, var(--dream-canvas) 18%, transparent));
+}
+
+html.codex-dream-skin.dream-safe-center {
+  --dream-window-wash: radial-gradient(ellipse at center,
+    color-mix(in oklab, var(--dream-canvas) 54%, transparent),
+    color-mix(in oklab, var(--dream-canvas) 20%, transparent) 70%);
+}
+
+html.codex-dream-skin.dream-theme-dark.dream-safe-center {
+  --dream-window-wash: radial-gradient(ellipse at center,
+    color-mix(in oklab, var(--dream-canvas) 58%, transparent),
+    color-mix(in oklab, var(--dream-canvas) 24%, transparent) 70%);
+}
+
+html.codex-dream-skin.dream-safe-none {
+  --dream-window-wash: linear-gradient(transparent, transparent);
+}
+
+html.codex-dream-skin body {
+  color: var(--dream-text) !important;
+  background-color: var(--dream-canvas) !important;
+}
+
+/* The new-task home is the visual showcase: paint the source artwork directly.
+   Readability washes remain limited to task routes where long-form text needs them. */
+html.codex-dream-skin:has(main.main-surface.dream-home-shell) body {
+  background-image: var(--dream-art) !important;
+  background-position: var(--dream-art-position) !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+html.codex-dream-skin:not(.dream-task-off):has(main.main-surface:not(.dream-home-shell)) body {
+  background-image: var(--dream-window-wash), var(--dream-art) !important;
+  background-position: center, var(--dream-art-position) !important;
+  background-size: cover, cover !important;
+  background-repeat: no-repeat, no-repeat !important;
+  background-attachment: fixed, fixed !important;
+}
+
+html.codex-dream-skin.dream-task-banner:not(.dream-task-off):has(main.main-surface:not(.dream-home-shell)) body {
+  background-position: center, center top !important;
+  background-size: cover, 100% auto !important;
+}
+
+html.codex-dream-skin aside.app-shell-left-panel {
+  color: var(--dream-text) !important;
+  background: var(--dream-sidebar) !important;
+  border-color: var(--dream-line-soft) !important;
+  box-shadow: var(--dream-shadow) !important;
+  backdrop-filter: var(--dream-panel-filter) !important;
+}
+
+html.codex-dream-skin aside.app-shell-left-panel button {
+  color: inherit !important;
+}
+
+html.codex-dream-skin aside.app-shell-left-panel button:hover {
+  background: var(--dream-accent-soft) !important;
+}
+
+html.codex-dream-skin aside.app-shell-left-panel [class~="bg-token-list-hover-background"],
+html.codex-dream-skin aside.app-shell-left-panel [aria-current="page"] {
+  color: var(--dream-text) !important;
+  background: var(--dream-accent-hover) !important;
+  box-shadow: inset 0 0 0 1px var(--dream-line-soft) !important;
+}
+
+html.codex-dream-skin aside.app-shell-left-panel svg,
+html.codex-dream-skin aside.app-shell-left-panel [class*="text-token"] {
+  color: currentColor;
+}
+
+html.codex-dream-skin main.main-surface {
+  color: var(--dream-text) !important;
+  background: transparent !important;
+  border-color: var(--dream-line-soft) !important;
+  box-shadow: inset 0 1px color-mix(in oklab, var(--dream-surface-raised) 72%, transparent) !important;
+}
+
+html.codex-dream-skin main.main-surface > header.app-header-tint {
+  color: var(--dream-text) !important;
+  background: var(--dream-header) !important;
+  border-color: var(--dream-line-soft) !important;
+  box-shadow: 0 1px 16px color-mix(in oklab, var(--dream-canvas) 22%, transparent) !important;
+  backdrop-filter: var(--dream-panel-filter) !important;
+}
+
+html.codex-dream-skin main.main-surface.dream-home-shell > header.app-header-tint {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.codex-dream-skin [class~="group/application-menu-top-bar"] {
+  color: var(--dream-text) !important;
+  background: var(--dream-sidebar) !important;
+  border-color: var(--dream-line-soft) !important;
+  box-shadow: 0 1px 12px color-mix(in oklab, var(--dream-canvas) 30%, transparent) !important;
+  backdrop-filter: var(--dream-panel-filter) !important;
+}
+
+html.codex-dream-skin [class~="group/application-menu-top-bar"] button,
+html.codex-dream-skin [class~="group/application-menu-top-bar"] svg {
+  color: var(--dream-text) !important;
+  text-shadow: 0 1px 2px color-mix(in oklab, var(--dream-canvas) 72%, transparent) !important;
+}
+
+html.codex-dream-skin [role="main"],
+html.codex-dream-skin .dream-home,
+html.codex-dream-skin .dream-task {
+  color: var(--dream-text) !important;
+  background: transparent !important;
+}
+
+/* Keep the native home-icon box in flow so hiding the animation cannot move
+   the composer, suggestions, or responsive breakpoints. */
+html.codex-dream-skin .dream-home [data-testid="home-icon"] {
+  filter: opacity(0) !important;
+}
+
+html.codex-dream-skin.dream-task-off main.main-surface:not(.dream-home-shell),
+html.codex-dream-skin.dream-task-off main.main-surface:not(.dream-home-shell) [role="main"] {
+  background: var(--dream-surface) !important;
+}
+
+html.codex-dream-skin .dream-home .group\/home-suggestions button {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-line-soft) !important;
+  border-radius: 16px !important;
+  background: var(--dream-surface-raised) !important;
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--dream-accent) 8%, transparent) !important;
+  backdrop-filter: var(--dream-dialog-filter) !important;
+}
+
+html.codex-dream-skin .dream-home .group\/home-suggestions button:hover {
+  border-color: var(--dream-line) !important;
+  background: var(--dream-accent-soft) !important;
+}
+
+html.codex-dream-skin .dream-home .group\/home-suggestions button > span:first-child > span:first-child {
+  color: var(--dream-accent-ink) !important;
+  border-radius: 12px !important;
+  background: var(--dream-accent) !important;
+  box-shadow: 0 0 0 6px var(--dream-accent-soft) !important;
+}
+
+html.codex-dream-skin .composer-surface-chrome,
+html.codex-dream-skin .dream-home-utility,
+html.codex-dream-skin main.main-surface div.no-drag:has(> input[type="text"]) {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-line) !important;
+  border-radius: 18px !important;
+  background: var(--dream-surface-raised) !important;
+  box-shadow: 0 12px 34px color-mix(in oklab, var(--dream-accent) 10%, transparent) !important;
+  backdrop-filter: var(--dream-dialog-filter) !important;
+}
+
+html.codex-dream-skin .composer-surface-chrome::before {
+  background: transparent !important;
+}
+
+html.codex-dream-skin .ProseMirror {
+  color: var(--dream-text) !important;
+  caret-color: var(--dream-accent) !important;
+}
+
+html.codex-dream-skin button[class~="bg-token-foreground"] {
+  color: var(--dream-accent-ink) !important;
+  background: var(--dream-accent) !important;
+  box-shadow: none !important;
+}
+
+html.codex-dream-skin [data-message-author-role],
+html.codex-dream-skin article {
+  color: var(--dream-text) !important;
+}
+
+/* Codex chat markdown owns explicit foreground colors. Re-map those stable
+   renderer roles so light Theme Packs remain readable without touching menus. */
+html.codex-dream-skin .thread-scroll-container [class*="_markdown"],
+html.codex-dream-skin .thread-scroll-container [data-user-message-bubble],
+html.codex-dream-skin .thread-scroll-container [class*="text-token-text-primary"],
+html.codex-dream-skin .thread-scroll-container [class*="text-token-foreground"] {
+  color: var(--dream-text) !important;
+}
+
+html.codex-dream-skin .thread-scroll-container [class*="text-token-text-secondary"],
+html.codex-dream-skin .thread-scroll-container [class*="text-token-text-tertiary"],
+html.codex-dream-skin .thread-scroll-container [class*="text-token-conversation-body"],
+html.codex-dream-skin .thread-scroll-container [class*="text-token-conversation-body"] * {
+  color: var(--dream-muted) !important;
+}
+
+html.codex-dream-skin .thread-scroll-container [class*="bg-token-input-background"] {
+  border-color: var(--dream-line-soft) !important;
+  background: var(--dream-surface-raised) !important;
+}
+
+/* Task artwork remains visible around the conversation, while the native
+   thread column becomes a dependable reading plane. The exact child is part
+   of the versioned adapter and is deliberately not guessed with fuzzy DOM
+   selectors. */
+html.codex-dream-skin main.main-surface:not(.dream-home-shell)
+  .thread-scroll-container > div.flex.min-h-full.shrink-0.flex-col {
+  background: var(--dream-reading-surface) !important;
+  box-shadow:
+    -24px 0 42px color-mix(in srgb, var(--dream-canvas) 42%, transparent),
+    24px 0 42px color-mix(in srgb, var(--dream-canvas) 42%, transparent) !important;
+}
+
+html.codex-dream-skin main.main-surface div.sticky:has(input[type="text"]),
+html.codex-dream-skin main.main-surface div.sticky:has(input[type="text"])::after,
+html.codex-dream-skin main.main-surface
+  [class~="bg-token-main-surface-primary"][class~="h-full"][class~="w-full"],
+html.codex-dream-skin main.main-surface .app-shell-main-content-top-fade,
+html.codex-dream-skin main.main-surface
+  .thread-scroll-container .bg-gradient-to-t.from-token-main-surface-primary {
+  background: transparent !important;
+}
+
+html.codex-dream-skin [class~="bg-token-main-surface-secondary"] {
+  color: var(--dream-text) !important;
+  background: var(--dream-surface-raised) !important;
+  border-color: var(--dream-line-soft) !important;
+  backdrop-filter: var(--dream-dialog-filter) !important;
+}
+
+html.codex-dream-skin ::selection {
+  color: var(--dream-accent-ink);
+  background: var(--dream-accent);
+}
+
+/* Theme Pack v2: all values below come from the fixed data schema. */
+html.codex-dream-skin:has(main.main-surface.dream-home-shell) body {
+  background-image:
+    var(--studio-home-wash),
+    var(--dream-art) !important;
+}
+
+html.codex-dream-skin:has(main.main-surface:not(.dream-home-shell)) body {
+  background-image:
+    var(--dream-window-wash),
+    var(--studio-task-wash),
+    var(--dream-task-art) !important;
+  background-position: center, center, var(--dream-art-position) !important;
+  background-size: cover, cover, cover !important;
+  background-repeat: no-repeat, no-repeat, no-repeat !important;
+}
+
+html.codex-dream-skin aside.app-shell-left-panel {
+  background: var(--dream-glass-panel) !important;
+}
+
+html.codex-dream-skin .composer-surface-chrome {
+  border-radius: var(--studio-radius) !important;
+  background: var(--dream-composer-surface) !important;
+}
+
+html.codex-dream-skin [role="dialog"],
+html.codex-dream-skin [role="menu"] {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-line) !important;
+  border-radius: var(--studio-radius) !important;
+  background: var(--dream-glass-dialog) !important;
+  box-shadow: var(--dream-shadow) !important;
+  backdrop-filter: var(--dream-dialog-filter) !important;
+}
+
+/* Component semantic layer: state colors only. Geometry remains host-owned. */
+html.codex-dream-skin button:focus-visible,
+html.codex-dream-skin [role="menuitem"]:focus-visible,
+html.codex-dream-skin [role="option"]:focus-visible,
+html.codex-dream-skin .ProseMirror:focus-visible {
+  border-color: var(--dream-accent) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dream-accent) 72%, transparent) !important;
+}
+
+html.codex-dream-skin button:active,
+html.codex-dream-skin button[aria-pressed="true"] {
+  color: var(--dream-accent-ink) !important;
+  background: color-mix(in srgb, var(--dream-accent) 82%, var(--dream-canvas)) !important;
+}
+
+html.codex-dream-skin button:disabled,
+html.codex-dream-skin button[aria-disabled="true"],
+html.codex-dream-skin [role="menuitem"][aria-disabled="true"],
+html.codex-dream-skin [role="option"][aria-disabled="true"] {
+  color: var(--dream-muted) !important;
+  border-color: var(--dream-line-soft) !important;
+  background: color-mix(in srgb, var(--dream-surface) 78%, transparent) !important;
+}
+
+html.codex-dream-skin [role="menuitem"]:hover,
+html.codex-dream-skin [role="option"]:hover {
+  color: var(--dream-text) !important;
+  background: var(--dream-accent-soft) !important;
+}
+
+html.codex-dream-skin [role="menuitem"][aria-selected="true"],
+html.codex-dream-skin [role="option"][aria-selected="true"],
+html.codex-dream-skin [role="menuitem"][aria-current] {
+  color: var(--dream-text) !important;
+  background: color-mix(in srgb, var(--dream-accent) 20%, var(--dream-surface)) !important;
+}
+
+html.codex-dream-skin .ProseMirror,
+html.codex-dream-skin textarea,
+html.codex-dream-skin input {
+  color: var(--dream-text) !important;
+  caret-color: var(--dream-accent) !important;
+}
+
+html.codex-dream-skin [role="tooltip"],
+html.codex-dream-skin [data-sonner-toast],
+html.codex-dream-skin [data-type="error"] {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-line) !important;
+  background: var(--dream-glass-dialog) !important;
+  box-shadow: var(--dream-shadow) !important;
+}
+
+html.codex-dream-skin [data-type="error"] {
+  border-color: color-mix(in srgb, #E26D7E 72%, var(--dream-line)) !important;
+}
+
+html.codex-dream-skin:is(.studio-layout-compact,.studio-layout-cinematic,.studio-layout-focus)
+  aside.app-shell-left-panel {
+  width: var(--studio-sidebar-width) !important;
+  min-width: var(--studio-sidebar-width) !important;
+  max-width: var(--studio-sidebar-width) !important;
+}
+
+html.codex-dream-skin:is(.studio-layout-compact,.studio-layout-cinematic,.studio-layout-focus)
+  .thread-scroll-container > div {
+  max-width: var(--studio-content-max) !important;
+  margin-inline: auto !important;
+}
+
+html.codex-dream-skin:is(.studio-layout-compact,.studio-layout-cinematic,.studio-layout-focus)
+  .composer-surface-chrome {
+  translate: 0 var(--studio-composer-offset) !important;
+}
+
+html.codex-dream-skin.studio-layout-focus aside.app-shell-left-panel {
+  opacity: .72;
+}
+
+html.codex-dream-skin.studio-density-compact aside.app-shell-left-panel button {
+  min-height: 30px !important;
+}
+
+html.codex-dream-skin.studio-density-spacious aside.app-shell-left-panel button {
+  min-height: 42px !important;
+}
+
+html.codex-dream-skin .studio-iconized {
+  position: relative !important;
+}
+
+html.codex-dream-skin .studio-iconized .studio-native-icon-hidden {
+  visibility: hidden !important;
+}
+
+html.codex-dream-skin .studio-semantic-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  pointer-events: none;
+  background: currentColor;
+  -webkit-mask: var(--studio-icon) center / contain no-repeat;
+  mask: var(--studio-icon) center / contain no-repeat;
+}
+
+html.codex-dream-skin .studio-semantic-icon-overlay {
+  position: absolute;
+  left: var(--studio-icon-left);
+  top: var(--studio-icon-top);
+  width: var(--studio-icon-width);
+  height: var(--studio-icon-height);
+  margin: 0;
+}

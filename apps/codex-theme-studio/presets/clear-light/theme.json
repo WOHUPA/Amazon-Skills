@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "clear-light",
+  "name": "澄澈浅光",
+  "appearance": "light",
+  "assets": {
+    "homeBackground": null,
+    "taskBackground": null,
+    "icons": {
+      "attach": "assets/icons/attach.svg",
+      "history": "assets/icons/history.svg",
+      "newTask": "assets/icons/newTask.svg",
+      "projects": "assets/icons/projects.svg",
+      "search": "assets/icons/search.svg",
+      "send": "assets/icons/send.svg",
+      "settings": "assets/icons/settings.svg",
+      "skills": "assets/icons/skills.svg"
+    }
+  },
+  "palette": {
+    "accent": "#7C8CFF",
+    "accentContrast": "#000000",
+    "canvas": "#EDF3F8",
+    "surface": "#FFFFFF",
+    "surfaceElevated": "#F8FBFD",
+    "text": "#17202B",
+    "textMuted": "#586779",
+    "border": "#CCD7E3",
+    "menu": "#F5F9FC",
+    "panel": "#FFFFFF",
+    "composer": "#FFFFFF",
+    "dialog": "#FFFFFF"
+  },
+  "materials": {
+    "panelOpacity": 1.0,
+    "composerOpacity": 1.0,
+    "dialogOpacity": 1.0,
+    "radius": 14,
+    "shadow": "soft",
+    "blur": 0
+  },
+  "layout": {
+    "mode": "native",
+    "sidebarWidth": 240,
+    "contentMaxWidth": 920,
+    "composerOffset": 0,
+    "density": "comfortable"
+  },
+  "art": {
+    "focusX": 0.7,
+    "focusY": 0.4,
+    "safeArea": "left",
+    "homeIntensity": 0.88,
+    "taskIntensity": 0.22
+  },
+  "compatibility": {
+    "codexMinVersion": "26.715",
+    "rendererFingerprint": "codex-theme-studio-v2",
+    "generatorVersion": "2.2.0"
+  },
+  "provenance": {
+    "generator": "codex-theme-generator",
+    "source": "none",
+    "template": "clear-light"
+  }
+}

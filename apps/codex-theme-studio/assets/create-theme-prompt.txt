@@ -1,0 +1,1 @@
+$codex-theme-generator 创建一套新的 Codex Desktop 主题。请先确认主题名称、kebab-case ID、深浅模式、素材和输出目录；只生成并静态验证 Theme Pack v2。生成完成后提供导入 Codex Theme Studio 的操作，不要自动激活。

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "doupo-medusa-green-lotus-evolution",
+  "name": "美杜莎女王·青莲地心火进化",
+  "appearance": "dark",
+  "assets": {
+    "homeBackground": "assets/home-background.jpg",
+    "taskBackground": "assets/task-background.jpg",
+    "icons": {
+      "attach": "assets/icons/attach.svg",
+      "history": "assets/icons/history.svg",
+      "newTask": "assets/icons/newTask.svg",
+      "projects": "assets/icons/projects.svg",
+      "search": "assets/icons/search.svg",
+      "send": "assets/icons/send.svg",
+      "settings": "assets/icons/settings.svg",
+      "skills": "assets/icons/skills.svg"
+    }
+  },
+  "palette": {
+    "accent": "#F05A93",
+    "accentContrast": "#000000",
+    "canvas": "#0D080D",
+    "surface": "#21121B",
+    "surfaceElevated": "#311927",
+    "text": "#F7F8FC",
+    "textMuted": "#B8C0CE",
+    "border": "#583047",
+    "menu": "#21121B",
+    "panel": "#21121B",
+    "composer": "#311927",
+    "dialog": "#311927"
+  },
+  "materials": {
+    "panelOpacity": 0.6,
+    "composerOpacity": 0.72,
+    "dialogOpacity": 0.82,
+    "radius": 16,
+    "shadow": "strong",
+    "blur": 12
+  },
+  "layout": {
+    "mode": "native",
+    "sidebarWidth": 240,
+    "contentMaxWidth": 920,
+    "composerOffset": 0,
+    "density": "comfortable"
+  },
+  "art": {
+    "focusX": 0.74,
+    "focusY": 0.48,
+    "safeArea": "left",
+    "homeIntensity": 0.94,
+    "taskIntensity": 0.28
+  },
+  "compatibility": {
+    "codexMinVersion": "26.715",
+    "rendererFingerprint": "codex-theme-studio-v2",
+    "generatorVersion": "2.2.0"
+  },
+  "provenance": {
+    "generator": "codex-theme-generator",
+    "source": "migrated",
+    "template": "immersive-dark"
+  }
+}

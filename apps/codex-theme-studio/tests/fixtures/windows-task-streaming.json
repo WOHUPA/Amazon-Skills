@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "codexVersion": "26.715.8383.0",
+  "componentBuild": "26.715.61943",
+  "scene": "task",
+  "composerState": "streaming",
+  "viewport": {
+    "width": 1280,
+    "height": 820
+  },
+  "selectorMatches": {
+    "html[data-codex-window-type=\"electron\"]": ["window"],
+    "main.main-surface": ["shell"],
+    "aside.app-shell-left-panel": ["sidebar"],
+    "[data-app-action-sidebar-scroll]": ["sidebar-scroll"],
+    "[data-app-shell-main-content-layout]": ["main-layout"],
+    "[role=\"main\"]": [],
+    "[data-app-action-timeline-scroll]": ["task-timeline"],
+    ".thread-scroll-container": ["task-timeline"],
+    "[data-codex-composer-root]": ["composer-root"],
+    ".composer-surface-chrome": ["composer-surface"],
+    "[data-codex-composer]": ["composer-input"],
+    "[aria-label=\"添加文件等内容\"]": ["attach-button"],
+    "[data-testid=\"composer-send-button\"]": [],
+    "[aria-label=\"Send\"]": [],
+    "[aria-label=\"发送\"]": [],
+    "[aria-label=\"发送消息\"]": [],
+    ".composer-surface-chrome button[class~=\"size-token-button-composer\"]:not([aria-label=\"Stop\"]):not([aria-label=\"停止\"])": [],
+    ".composer-surface-chrome button[class~=\"size-token-button-composer\"][aria-label=\"Stop\"]": [],
+    ".composer-surface-chrome button[class~=\"size-token-button-composer\"][aria-label=\"停止\"]": ["stop-button"]
+  },
+  "iconsApplied": [
+    "attach"
+  ],
+  "iconMetrics": {
+    "stop-button": {
+      "width": 25.19,
+      "height": 25.19,
+      "pointerEvents": "auto"
+    }
+  },
+  "componentMetrics": {
+    "sidebar": {
+      "clientWidth": 240,
+      "scrollWidth": 248,
+      "clientHeight": 875,
+      "scrollHeight": 875,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "expectedClipped": false,
+      "overflowSource": "visible-resize-handle"
+    }
+  }
+}

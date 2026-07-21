@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "immersive-dark",
+  "name": "沉浸深空",
+  "appearance": "dark",
+  "assets": {
+    "homeBackground": "assets/home-background.jpg",
+    "taskBackground": "assets/task-background.jpg",
+    "icons": {
+      "attach": "assets/icons/attach.svg",
+      "history": "assets/icons/history.svg",
+      "newTask": "assets/icons/newTask.svg",
+      "projects": "assets/icons/projects.svg",
+      "search": "assets/icons/search.svg",
+      "send": "assets/icons/send.svg",
+      "settings": "assets/icons/settings.svg",
+      "skills": "assets/icons/skills.svg"
+    }
+  },
+  "palette": {
+    "accent": "#7C8CFF",
+    "accentContrast": "#000000",
+    "canvas": "#090B10",
+    "surface": "#151923",
+    "surfaceElevated": "#202633",
+    "text": "#F6F8FC",
+    "textMuted": "#AAB4C4",
+    "border": "#354052",
+    "menu": "#111722",
+    "panel": "#151B27",
+    "composer": "#1A2230",
+    "dialog": "#202938"
+  },
+  "materials": {
+    "panelOpacity": 0.58,
+    "composerOpacity": 0.68,
+    "dialogOpacity": 0.76,
+    "radius": 16,
+    "shadow": "strong",
+    "blur": 12
+  },
+  "layout": {
+    "mode": "native",
+    "sidebarWidth": 240,
+    "contentMaxWidth": 920,
+    "composerOffset": 0,
+    "density": "comfortable"
+  },
+  "art": {
+    "focusX": 0.7,
+    "focusY": 0.4,
+    "safeArea": "left",
+    "homeIntensity": 0.92,
+    "taskIntensity": 0.28
+  },
+  "compatibility": {
+    "codexMinVersion": "26.715",
+    "rendererFingerprint": "codex-theme-studio-v2",
+    "generatorVersion": "2.2.0"
+  },
+  "provenance": {
+    "generator": "codex-theme-generator",
+    "source": "provided",
+    "template": "immersive-dark"
+  }
+}

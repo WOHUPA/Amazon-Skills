@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "doupo-xun-er-emperor-seal",
+  "name": "萧薰儿·古帝印",
+  "appearance": "dark",
+  "assets": {
+    "homeBackground": "assets/home-background.jpg",
+    "taskBackground": "assets/task-background.jpg",
+    "icons": {
+      "attach": "assets/icons/attach.svg",
+      "history": "assets/icons/history.svg",
+      "newTask": "assets/icons/newTask.svg",
+      "projects": "assets/icons/projects.svg",
+      "search": "assets/icons/search.svg",
+      "send": "assets/icons/send.svg",
+      "settings": "assets/icons/settings.svg",
+      "skills": "assets/icons/skills.svg"
+    }
+  },
+  "palette": {
+    "accent": "#F0C75E",
+    "accentContrast": "#000000",
+    "canvas": "#0E0C07",
+    "surface": "#211D12",
+    "surfaceElevated": "#332A17",
+    "text": "#F7F8FC",
+    "textMuted": "#B8C0CE",
+    "border": "#5C4C28",
+    "menu": "#211D12",
+    "panel": "#211D12",
+    "composer": "#332A17",
+    "dialog": "#332A17"
+  },
+  "materials": {
+    "panelOpacity": 0.6,
+    "composerOpacity": 0.72,
+    "dialogOpacity": 0.82,
+    "radius": 16,
+    "shadow": "strong",
+    "blur": 12
+  },
+  "layout": {
+    "mode": "native",
+    "sidebarWidth": 240,
+    "contentMaxWidth": 920,
+    "composerOffset": 0,
+    "density": "comfortable"
+  },
+  "art": {
+    "focusX": 0.73,
+    "focusY": 0.46,
+    "safeArea": "left",
+    "homeIntensity": 0.94,
+    "taskIntensity": 0.28
+  },
+  "compatibility": {
+    "codexMinVersion": "26.715",
+    "rendererFingerprint": "codex-theme-studio-v2",
+    "generatorVersion": "2.2.0"
+  },
+  "provenance": {
+    "generator": "codex-theme-generator",
+    "source": "migrated",
+    "template": "immersive-dark"
+  }
+}

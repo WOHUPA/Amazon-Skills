@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "registryVersion": "2.2.1",
+  "fallback": {
+    "layout": "native",
+    "status": "BLOCKED"
+  },
+  "adapters": [
+    {
+      "id": "windows-26.715.8383.0",
+      "platform": "windows",
+      "codexVersions": [
+        "26.715.8383.0"
+      ],
+      "componentBuilds": [
+        "26.715.61943"
+      ],
+      "rendererFingerprint": "codex-theme-studio-v2",
+      "structureSignatures": {
+        "window": {
+          "selectors": ["html[data-codex-window-type=\"electron\"]"],
+          "min": 1,
+          "max": 1
+        },
+        "shell": {
+          "selectors": ["main.main-surface"],
+          "min": 1,
+          "max": 1
+        },
+        "sidebar": {
+          "selectors": ["[data-app-action-sidebar-scroll]"],
+          "min": 1,
+          "max": 1
+        },
+        "main": {
+          "selectors": ["[data-app-shell-main-content-layout]"],
+          "min": 1,
+          "max": 1
+        },
+        "composer": {
+          "selectors": ["[data-codex-composer-root]"],
+          "min": 1,
+          "max": 1
+        }
+      },
+      "layoutMatrix": {
+        "native": {
+          "status": "COMPLETE",
+          "requiredScenes": ["home", "task", "project-menu", "app-menu", "dialog", "task-sidebar"]
+        },
+        "compact": {
+          "status": "BLOCKED",
+          "reason": "No complete visual baseline for this Codex version"
+        },
+        "cinematic": {
+          "status": "BLOCKED",
+          "reason": "No complete visual baseline for this Codex version"
+        },
+        "focus": {
+          "status": "BLOCKED",
+          "reason": "No complete visual baseline for this Codex version"
+        }
+      },
+      "components": {
+        "shell": {
+          "kind": "layout",
+          "selectors": ["main.main-surface"],
+          "min": 1,
+          "max": 1
+        },
+        "sidebar": {
+          "kind": "panel",
+          "selectors": ["aside.app-shell-left-panel"],
+          "min": 1,
+          "max": 1
+        },
+        "main": {
+          "kind": "layout",
+          "selectors": [
+            "[data-app-action-timeline-scroll]",
+            "main.main-surface:has([data-testid=\"home-icon\"])",
+            "[role=\"main\"]"
+          ],
+          "min": 1,
+          "max": 3
+        },
+        "home": {
+          "kind": "page",
+          "selectors": ["main.main-surface:has([data-testid=\"home-icon\"])"],
+          "min": 1,
+          "max": 1
+        },
+        "task": {
+          "kind": "page",
+          "selectors": ["[data-app-action-timeline-scroll]", ".thread-scroll-container"],
+          "min": 1,
+          "max": 1
+        },
+        "composer": {
+          "kind": "input",
+          "selectors": [".composer-surface-chrome", "[data-codex-composer]"],
+          "min": 1,
+          "max": 2
+        },
+        "menu": {
+          "kind": "menu",
+          "selectors": ["[role=\"menu\"]"],
+          "min": 1,
+          "max": 4
+        },
+        "menuItems": {
+          "kind": "menu-item",
+          "selectors": ["[role=\"menu\"] [role=\"menuitem\"]", "[role=\"menu\"] [role=\"option\"]"],
+          "min": 1,
+          "max": 80
+        },
+        "projectTrigger": {
+          "kind": "button",
+          "selectors": [
+            ".group\\/project-selector",
+            "[aria-label=\"Projects\"]",
+            "[aria-label=\"项目\"]",
+            "[aria-label=\"项目侧边栏选项\"]"
+          ],
+          "min": 1,
+          "max": 2
+        },
+        "appMenuBar": {
+          "kind": "menu",
+          "selectors": ["[class~=\"group/application-menu-top-bar\"]"],
+          "min": 1,
+          "max": 1
+        },
+        "dialog": {
+          "kind": "dialog",
+          "selectors": ["[role=\"dialog\"]"],
+          "min": 1,
+          "max": 4
+        },
+        "taskSidebar": {
+          "kind": "panel",
+          "selectors": ["[data-testid=\"task-sidebar\"]", "[data-testid=\"thread-panel\"]", "aside:not(.app-shell-left-panel)"],
+          "min": 1,
+          "max": 2
+        }
+      },
+      "iconTargets": {
+        "newTask": ["[data-testid=\"new-task-button\"]", "[aria-label=\"New task\"]", "[aria-label=\"新任务\"]", "[aria-label=\"新建任务\"]"],
+        "search": ["[data-testid=\"search-button\"]", "[aria-label=\"Search\"]", "[aria-label=\"搜索\"]"],
+        "projects": ["[data-testid=\"projects-button\"]", "[aria-label=\"Projects\"]", "[aria-label=\"项目\"]", "[aria-label=\"项目侧边栏选项\"]", "[aria-label=\"添加新项目\"]"],
+        "history": ["[data-testid=\"history-button\"]", "[aria-label=\"History\"]", "[aria-label=\"历史\"]", "[aria-label=\"任务侧边栏选项\"]"],
+        "attach": ["[data-testid=\"composer-attach-button\"]", "[aria-label=\"Attach\"]", "[aria-label=\"附件\"]", "[aria-label=\"添加附件\"]", "[aria-label=\"添加文件等内容\"]", "[aria-label=\"Attach files\"]"],
+        "send": [
+          "[data-testid=\"composer-send-button\"]",
+          "[aria-label=\"Send\"]",
+          "[aria-label=\"发送\"]",
+          "[aria-label=\"发送消息\"]",
+          ".composer-surface-chrome button[class~=\"size-token-button-composer\"]:not([aria-label=\"Stop\"]):not([aria-label=\"停止\"])"
+        ],
+        "settings": ["[data-testid=\"settings-button\"]", "[aria-label=\"Settings\"]", "[aria-label=\"设置\"]"],
+        "skills": ["[data-testid=\"skills-button\"]", "[aria-label=\"Skills\"]", "[aria-label=\"技能\"]"]
+      },
+      "iconSlotAlternates": {
+        "send": {
+          "stop": [
+            ".composer-surface-chrome button[class~=\"size-token-button-composer\"][aria-label=\"Stop\"]",
+            ".composer-surface-chrome button[class~=\"size-token-button-composer\"][aria-label=\"停止\"]"
+          ]
+        }
+      },
+      "semanticStateSelectors": {
+        "button": ["button"],
+        "menu": ["[role=\"menu\"]", "[role=\"menuitem\"]", "[role=\"option\"]"],
+        "composer": ["[data-codex-composer-root]", ".composer-surface-chrome", "[data-codex-composer]", ".ProseMirror"],
+        "sidebar": [
+          "aside.app-shell-left-panel",
+          "[data-testid=\"task-sidebar\"]",
+          "[data-testid=\"thread-panel\"]",
+          "[aria-controls][aria-expanded]"
+        ],
+        "overlay": ["[role=\"dialog\"]", "[role=\"tooltip\"]", "[data-sonner-toast]", "[data-type=\"error\"]"]
+      },
+      "sceneContracts": {
+        "home": {
+          "detect": ["main.main-surface:has([data-testid=\"home-icon\"])"],
+          "requiredComponents": ["shell", "sidebar", "home", "composer"],
+          "expectedIconSlots": ["newTask", "attach", "send"],
+          "nonOverlapPairs": [["sidebar", "composer"]]
+        },
+        "task": {
+          "detect": ["[data-app-action-timeline-scroll]", ".thread-scroll-container"],
+          "requiredComponents": ["shell", "sidebar", "task", "composer"],
+          "expectedIconSlots": ["attach", "send"],
+          "nonOverlapPairs": [["sidebar", "composer"]]
+        },
+        "project-menu": {
+          "detect": ["[role=\"menu\"]"],
+          "requiredComponents": ["projectTrigger", "menu", "menuItems"],
+          "expectedIconSlots": ["projects"],
+          "nonOverlapPairs": []
+        },
+        "app-menu": {
+          "detect": ["[class~=\"group/application-menu-top-bar\"] [role=\"menu\"]", "[role=\"menu\"]"],
+          "requiredComponents": ["appMenuBar", "menu", "menuItems"],
+          "expectedIconSlots": [],
+          "nonOverlapPairs": []
+        },
+        "dialog": {
+          "detect": ["[role=\"dialog\"]"],
+          "requiredComponents": ["dialog"],
+          "expectedIconSlots": [],
+          "nonOverlapPairs": []
+        },
+        "task-sidebar": {
+          "detect": ["[data-testid=\"task-sidebar\"]", "[data-testid=\"thread-panel\"]", "aside:not(.app-shell-left-panel)"],
+          "requiredComponents": ["taskSidebar"],
+          "expectedIconSlots": ["history"],
+          "nonOverlapPairs": [["sidebar", "taskSidebar"]]
+        }
+      }
+    }
+  ]
+}

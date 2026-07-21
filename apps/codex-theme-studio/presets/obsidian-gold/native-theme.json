@@ -1,0 +1,20 @@
+{
+  "codeThemeId": "codex",
+  "variant": "dark",
+  "theme": {
+    "accent": "#D7AE55",
+    "contrast": 60,
+    "fonts": {
+      "code": null,
+      "ui": null
+    },
+    "ink": "#FFF8E7",
+    "opaqueWindows": false,
+    "semanticColors": {
+      "diffAdded": "#40C977",
+      "diffRemoved": "#FA423E",
+      "skill": "#D7AE55"
+    },
+    "surface": "#080807"
+  }
+}
