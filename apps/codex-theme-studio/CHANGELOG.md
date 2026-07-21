@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### 2.6.0 MSI 与事务式独立更新器
+
+- 主分发格式迁移为固定 `UpgradeCode` 的 WiX MSI，接入 Windows Installer 修复、卸载和事务回滚能力。
+- 保留 Inno Setup EXE 作为 2.5.x 用户的一次性兼容桥；桥接安装后客户端自动切换到 MSI 更新通道。
+- 新增独立 `CodexThemeStudio.Updater.exe`：等待主程序退出，再次校验 SHA-256、Minisign 和更新器自身哈希，然后调用 `msiexec`。
+- 升级事务、详细 MSI 日志和最终回执写入更新目录；失败时保留旧版本并重新打开客户端展示原因。
+- 下载支持断点续传和三次重试；安装成功后校验磁盘中的实际程序版本。
+- 更新信任由单一公钥升级为可轮换公钥环，清单同时兼容单签名和多签名过渡版本。
+- GitHub Release 同时发布 MSI、桥接 EXE、各自 Minisign 签名及双平台 `latest.json`。
+
 ### 2.5.1 .NET 引擎、可信更新与统一黑白品牌
 
 - 客户端的激活、回退、暂停、恢复、验证、运行时安装和卸载迁入 .NET，不再启动 PowerShell。

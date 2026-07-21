@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$AppVersion = '2.5.1',
+  [string]$AppVersion = '2.6.0',
   [string]$GitHubRepository = '',
   [string]$UpdateReleaseTag = 'latest',
   [string]$NodeVersion = '24.18.0',
@@ -21,8 +21,12 @@ $launcherSource = Join-Path $root 'desktop\Launcher.cs'
 $clientSource = Join-Path $root 'desktop\StudioClient.cs'
 $engineSource = Join-Path $root 'desktop\ThemeEngine.cs'
 $updateSource = Join-Path $root 'desktop\UpdateService.cs'
+$updaterSource = Join-Path $root 'desktop\Updater.cs'
 $updatePublicKeyFile = Join-Path $root 'assets\update-public-key.txt'
+$updatePublicKeysFile = Join-Path $root 'assets\update-public-keys.txt'
 $installerSource = Join-Path $root 'installer\CodexThemeStudio.iss'
+$wixSource = Join-Path $root 'installer\CodexThemeStudio.wxs'
+$licenseRtf = Join-Path $root 'installer\license.rtf'
 $versionFile = Join-Path $root 'assets\studio-version.txt'
 $iconSource = Join-Path $root 'assets\studio-icon.png'
 $runtimeIcon = Join-Path $root 'assets\studio.ico'
@@ -33,7 +37,7 @@ $presentationFramework = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_M
 $windowsBase = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\WindowsBase' -Recurse -Filter WindowsBase.dll -ErrorAction Stop | Select-Object -First 1).FullName
 $systemXaml = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xaml' -Recurse -Filter System.Xaml.dll -ErrorAction Stop | Select-Object -First 1).FullName
 
-foreach ($required in @($launcherSource, $clientSource, $engineSource, $updateSource, $updatePublicKeyFile, $installerSource, $versionFile, $iconSource, $signScript,$csc,$presentationCore,$presentationFramework,$windowsBase,$systemXaml)) {
+foreach ($required in @($launcherSource, $clientSource, $engineSource, $updateSource, $updaterSource, $updatePublicKeyFile, $updatePublicKeysFile, $installerSource, $wixSource, $licenseRtf, $versionFile, $iconSource, $signScript,$csc,$presentationCore,$presentationFramework,$windowsBase,$systemXaml)) {
   if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
     throw "Windows installer build dependency is missing: $required"
   }
@@ -169,19 +173,14 @@ if ((Get-FileHash -LiteralPath $cachedMinisign -Algorithm SHA256).Hash -ine $min
 Copy-Item -LiteralPath $cachedMinisign -Destination (Join-Path $runtimeBin 'minisign.exe') -Force
 
 $updatePublicKey = (Get-Content -Raw -LiteralPath $updatePublicKeyFile -Encoding UTF8).Trim()
-if ($updatePublicKey -cnotmatch '^RW[A-Za-z0-9+/=]{50,}$') { throw 'Invalid Minisign update public key.' }
-$updateTrustSource = Join-Path $buildRoot 'UpdateTrust.g.cs'
-$updateTrustCode = @"
-namespace CodexThemeStudio.Desktop
-{
-    internal static class UpdateTrust
-    {
-        public const string PublicKey = "$updatePublicKey";
-        public const string VerifierSha256 = "$minisignExeHash";
-    }
+$updatePublicKeys = @(Get-Content -LiteralPath $updatePublicKeysFile -Encoding UTF8 | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
+if ($updatePublicKey -cnotmatch '^RW[A-Za-z0-9+/=]{50,}$' -or $updatePublicKeys.Count -eq 0 -or $updatePublicKeys -cnotcontains $updatePublicKey) {
+  throw 'The trusted Minisign key ring is invalid or does not contain the current release key.'
 }
-"@
-[System.IO.File]::WriteAllText($updateTrustSource, $updateTrustCode, [System.Text.UTF8Encoding]::new($false))
+foreach ($key in $updatePublicKeys) {
+  if ($key -cnotmatch '^RW[A-Za-z0-9+/=]{50,}$') { throw "Invalid Minisign update public key: $key" }
+}
+$publicKeysCode = ($updatePublicKeys | ForEach-Object { '"' + $_ + '"' }) -join ', '
 
 $updateConfig = [ordered]@{
   schemaVersion = 2
@@ -191,7 +190,7 @@ $updateConfig = [ordered]@{
   } else {
     "https://github.com/$GitHubRepository/releases/download/$UpdateReleaseTag/latest.json"
   }
-  platform = 'windows-x86_64'
+  platform = 'windows-x86_64-msi'
 }
 $updateConfigPath = Join-Path $payloadRoot 'assets\update-channel.json'
 [System.IO.File]::WriteAllText($updateConfigPath, ($updateConfig | ConvertTo-Json -Depth 4), [System.Text.UTF8Encoding]::new($false))
@@ -216,20 +215,6 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 )
 
 $icon = $runtimeIcon
-$launcher = Join-Path $buildRoot 'CodexThemeStudio.exe'
-$compilerArgs = @(
-  '/nologo', '/target:winexe', '/optimize+', '/platform:x64',
-  "/out:$launcher", "/win32icon:$icon", "/resource:$runtimeZip,CodexThemeStudio.Runtime.zip",
-  '/reference:System.dll', '/reference:System.Core.dll', '/reference:System.Windows.Forms.dll',
-  '/reference:System.Drawing.dll', "/reference:$systemXaml",
-  "/reference:$windowsBase", "/reference:$presentationCore", "/reference:$presentationFramework",
-  '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll',
-  $launcherSource, $clientSource, $engineSource, $updateSource, $updateTrustSource
-)
-& $csc @compilerArgs
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
-  throw "CodexThemeStudio.exe compilation failed with exit code $LASTEXITCODE."
-}
 
 function Invoke-StudioSigning([string[]]$Files) {
   if ($SignMode -eq 'None') {
@@ -245,6 +230,55 @@ function Invoke-StudioSigning([string[]]$Files) {
   if ($LASTEXITCODE -ne 0) { throw 'Artifact signing failed.' }
 }
 
+$updaterTrustSource = Join-Path $buildRoot 'UpdaterTrust.g.cs'
+$updaterTrustCode = @"
+namespace CodexThemeStudio.Updater
+{
+    internal static class UpdateTrust
+    {
+        public static readonly string[] PublicKeys = new string[] { $publicKeysCode };
+        public const string VerifierSha256 = "$minisignExeHash";
+    }
+}
+"@
+[System.IO.File]::WriteAllText($updaterTrustSource, $updaterTrustCode, [System.Text.UTF8Encoding]::new($false))
+$updater = Join-Path $buildRoot 'CodexThemeStudio.Updater.exe'
+& $csc '/nologo' '/target:winexe' '/optimize+' '/platform:x64' "/out:$updater" "/win32icon:$icon" `
+  '/reference:System.dll' '/reference:System.Core.dll' '/reference:System.Web.Extensions.dll' $updaterSource $updaterTrustSource
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $updater -PathType Leaf)) {
+  throw "CodexThemeStudio.Updater.exe compilation failed with exit code $LASTEXITCODE."
+}
+Invoke-StudioSigning -Files @($updater)
+$updaterSha256 = (Get-FileHash -LiteralPath $updater -Algorithm SHA256).Hash
+
+$updateTrustSource = Join-Path $buildRoot 'UpdateTrust.g.cs'
+$updateTrustCode = @"
+namespace CodexThemeStudio.Desktop
+{
+    internal static class UpdateTrust
+    {
+        public static readonly string[] PublicKeys = new string[] { $publicKeysCode };
+        public const string VerifierSha256 = "$minisignExeHash";
+        public const string UpdaterSha256 = "$updaterSha256";
+    }
+}
+"@
+[System.IO.File]::WriteAllText($updateTrustSource, $updateTrustCode, [System.Text.UTF8Encoding]::new($false))
+
+$launcher = Join-Path $buildRoot 'CodexThemeStudio.exe'
+$compilerArgs = @(
+  '/nologo', '/target:winexe', '/optimize+', '/platform:x64',
+  "/out:$launcher", "/win32icon:$icon", "/resource:$runtimeZip,CodexThemeStudio.Runtime.zip",
+  '/reference:System.dll', '/reference:System.Core.dll', '/reference:System.Windows.Forms.dll',
+  '/reference:System.Drawing.dll', "/reference:$systemXaml",
+  "/reference:$windowsBase", "/reference:$presentationCore", "/reference:$presentationFramework",
+  '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll',
+  $launcherSource, $clientSource, $engineSource, $updateSource, $updateTrustSource
+)
+& $csc @compilerArgs
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
+  throw "CodexThemeStudio.exe compilation failed with exit code $LASTEXITCODE."
+}
 Invoke-StudioSigning -Files @($launcher)
 
 $innoCandidates = @(
@@ -257,11 +291,73 @@ if (-not $iscc) {
   throw 'Inno Setup 6 is required. Install JRSoftware.InnoSetup with winget, then rerun this script.'
 }
 
-& $iscc "/DAppVersion=$AppVersion" "/DSourceExe=$launcher" "/DOutputDir=$distRoot" "/DSetupIcon=$icon" $installerSource
+& $iscc "/DAppVersion=$AppVersion" "/DSourceExe=$launcher" "/DUpdaterExe=$updater" "/DOutputDir=$distRoot" "/DSetupIcon=$icon" $installerSource
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
 
-$installer = Join-Path $distRoot "Codex-Theme-Studio-Setup-$AppVersion.exe"
-if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) { throw "Installer output is missing: $installer" }
+$bridgeInstaller = Join-Path $distRoot "Codex-Theme-Studio-Setup-$AppVersion.exe"
+if (-not (Test-Path -LiteralPath $bridgeInstaller -PathType Leaf)) { throw "Bridge installer output is missing: $bridgeInstaller" }
+Invoke-StudioSigning -Files @($bridgeInstaller)
+
+$wixVersion = '3.14.1'
+$wixPackageHash = '15D50463C73DCE31FBEA5440AC33AF47E92D54D4188166D207E9E39577B8FE0F'
+$wixCacheBase = Join-Path $env:LOCALAPPDATA 'CodexThemeStudioBuildCache'
+$wixPackage = Join-Path $wixCacheBase "wix.$wixVersion.nupkg"
+$wixCacheRoot = Join-Path $wixCacheBase "wix-$wixVersion"
+if (-not (Test-Path -LiteralPath $wixPackage -PathType Leaf) -or
+    (Get-FileHash -LiteralPath $wixPackage -Algorithm SHA256).Hash -ine $wixPackageHash) {
+  New-Item -ItemType Directory -Path $wixCacheBase -Force | Out-Null
+  $wixDownload = "$wixPackage.download"
+  Invoke-WebRequest -UseBasicParsing -Uri "https://www.nuget.org/api/v2/package/wix/$wixVersion" -OutFile $wixDownload
+  if ((Get-FileHash -LiteralPath $wixDownload -Algorithm SHA256).Hash -ine $wixPackageHash) {
+    [System.IO.File]::Delete($wixDownload)
+    throw 'Downloaded WiX NuGet package failed SHA-256 verification.'
+  }
+  if (Test-Path -LiteralPath $wixPackage) { [System.IO.File]::Delete($wixPackage) }
+  [System.IO.File]::Move($wixDownload, $wixPackage)
+}
+$cachedCandle = Join-Path $wixCacheRoot 'tools\candle.exe'
+$cachedLight = Join-Path $wixCacheRoot 'tools\light.exe'
+if (-not (Test-Path -LiteralPath $cachedCandle -PathType Leaf) -or -not (Test-Path -LiteralPath $cachedLight -PathType Leaf)) {
+  $resolvedWixCache = [System.IO.Path]::GetFullPath($wixCacheRoot)
+  $allowedWixCache = [System.IO.Path]::GetFullPath($wixCacheBase).TrimEnd('\') + '\'
+  if (-not $resolvedWixCache.StartsWith($allowedWixCache, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Refusing to replace an unsafe WiX cache path: $resolvedWixCache"
+  }
+  if (Test-Path -LiteralPath $resolvedWixCache) { [System.IO.Directory]::Delete($resolvedWixCache, $true) }
+  [System.IO.Compression.ZipFile]::ExtractToDirectory($wixPackage, $resolvedWixCache)
+}
+
+$candleCandidates = @(
+  $cachedCandle,
+  (Join-Path ${env:ProgramFiles(x86)} 'WiX Toolset v3.14\bin\candle.exe'),
+  (Join-Path ${env:ProgramFiles(x86)} 'WiX Toolset v3.11\bin\candle.exe'),
+  (Get-Command candle.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) }
+$lightCandidates = @(
+  $cachedLight,
+  (Join-Path ${env:ProgramFiles(x86)} 'WiX Toolset v3.14\bin\light.exe'),
+  (Join-Path ${env:ProgramFiles(x86)} 'WiX Toolset v3.11\bin\light.exe'),
+  (Get-Command light.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) }
+$candle = $candleCandidates | Select-Object -First 1
+$light = $lightCandidates | Select-Object -First 1
+if (-not $candle -or -not $light) { throw 'WiX Toolset 3.14.1 is required to build the MSI package.' }
+$wixObject = Join-Path $buildRoot 'CodexThemeStudio.wixobj'
+$installer = Join-Path $distRoot "Codex-Theme-Studio-$AppVersion-Windows-x64.msi"
+$productCodeBytes = [System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("CodexThemeStudio.ProductCode/$AppVersion"))
+$productCode = ([Guid]::new($productCodeBytes)).ToString('D').ToUpperInvariant()
+$candleArgs = @(
+  '-nologo', '-arch', 'x64',
+  "-dAppVersion=$AppVersion", "-dProductCode=$productCode", "-dSourceExe=$launcher", "-dUpdaterExe=$updater",
+  "-dSetupIcon=$icon", "-dLicenseRtf=$licenseRtf", "-out", $wixObject, $wixSource
+)
+& $candle @candleArgs
+if ($LASTEXITCODE -ne 0) { throw "WiX candle compilation failed with exit code $LASTEXITCODE." }
+# ICE91 is not applicable because this package intentionally supports per-user installation only.
+& $light '-nologo' '-sice:ICE91' '-ext' 'WixUIExtension' '-out' $installer $wixObject
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+  throw "WiX light linking failed with exit code $LASTEXITCODE."
+}
 Invoke-StudioSigning -Files @($installer)
 $launcherVersion = (Get-Item -LiteralPath $launcher).VersionInfo.ProductVersion
 if ($launcherVersion -notlike "$AppVersion*") { throw "Launcher version mismatch: $launcherVersion" }
@@ -271,9 +367,14 @@ if ($launcherVersion -notlike "$AppVersion*") { throw "Launcher version mismatch
   appVersion = $AppVersion
   launcher = $launcher
   launcherBytes = (Get-Item -LiteralPath $launcher).Length
+  updater = $updater
+  updaterSha256 = $updaterSha256
   runtimeFiles = @(Get-ChildItem -LiteralPath $payloadRoot -File -Recurse).Count
   installer = $installer
+  productCode = $productCode
   installerBytes = (Get-Item -LiteralPath $installer).Length
+  bridgeInstaller = $bridgeInstaller
+  bridgeInstallerBytes = (Get-Item -LiteralPath $bridgeInstaller).Length
   signMode = $SignMode
   signatureStatus = "$( (Get-AuthenticodeSignature -LiteralPath $installer).Status )"
   nodeVersion = $NodeVersion

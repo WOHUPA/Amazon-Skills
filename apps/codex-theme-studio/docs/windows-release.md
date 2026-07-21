@@ -2,91 +2,105 @@
 
 ## 当前发布模型
 
-Codex Theme Studio 使用原生 WPF 客户端和 Inno Setup 离线 EXE 安装包。安装器使用固定 `AppId`，新版本会原位覆盖程序文件，并保留 `%LOCALAPPDATA%\CodexThemeStudio` 中的主题、备份和运行状态。
+Codex Theme Studio 2.6 起以 WiX MSI 为 Windows 主安装包。MSI 使用稳定 `UpgradeCode` 和按版本确定生成的 `ProductCode`，安装到 `%LOCALAPPDATA%\Programs\Codex Theme Studio`，由 Windows Installer 提供原位升级、修复、卸载和失败事务回滚。
 
-运行时内置经过固定 SHA-256 校验的 Node.js 24 LTS，仅用于执行页面渲染器；主题事务、Codex 会话、暂停、恢复、回退、验证和安装生命周期均由 .NET 引擎完成，不再依赖 PowerShell。
+每个版本暂时同时生成两种文件：
 
-## CC Switch 式升级逻辑
+- `Codex-Theme-Studio-<version>-Windows-x64.msi`：2.6+ 客户端和新用户使用的正式安装包。
+- `Codex-Theme-Studio-Setup-<version>.exe`：只供仍安装 2.5.x 的用户进入 MSI 更新线。桥接完成后，新客户端只读取 MSI 平台项。
 
-客户端读取 GitHub Release 中固定地址的 `latest.json`，按 `windows-x86_64` 选择安装包并执行：
+运行时内置经过固定 SHA-256 校验的 Node.js 24 LTS，仅用于页面渲染器。主题事务、Codex 会话、暂停、恢复、回退、验证和安装生命周期均由 .NET 引擎完成。
 
-1. 比较清单版本与当前版本。
-2. 只接受已配置仓库下的 HTTPS Release URL。
-3. 下载 Windows EXE 到用户更新暂存目录。
-4. 校验清单声明的 SHA-256。
-5. 使用编译进当前客户端的 Minisign/Ed25519 公钥验证安装包签名。
-6. 安装前再次校验 SHA-256 与 Minisign 签名。
-7. 静默启动固定 `AppId` 的安装器完成原位升级。
+## 事务式升级链路
 
-Minisign 公钥位于 `assets/update-public-key.txt`，同时被编译进客户端；验证器使用固定版本和 SHA-256 打包，运行前再次校验自身完整性。私钥不得进入源码、安装包、日志或 Release，只能保存在发布者的离线备份和 GitHub Actions Secret 中。
+客户端读取固定 GitHub Release 中的 `latest.json`，按平台选择安装包：
 
-## 本地构建与发布
+- 旧版：`windows-x86_64`，对应桥接 EXE。
+- 新版：`windows-x86_64-msi`，对应正式 MSI。
+
+新链路依次执行：
+
+1. 比较远端版本；远端不高于本机时不要求旧清单包含 MSI 平台项。
+2. 只接受配置仓库下的 HTTPS GitHub Release URL。
+3. 断点续传 MSI，失败时最多重试三次。
+4. 校验 SHA-256，并用客户端内置公钥环验证一个或多个 Minisign 签名。
+5. 校验安装目录中的独立更新器哈希，把更新器复制到版本暂存目录。
+6. 写入 `transaction.json`，启动更新器并退出主程序。
+7. 更新器等待主程序完全退出，再次校验 SHA-256、Minisign 和验证器自身哈希。
+8. 通过 `msiexec /passive /norestart /L*v` 安装；Windows Installer 失败时自动回滚文件与注册状态。
+9. 安装后检查磁盘中 `CodexThemeStudio.exe` 的实际版本，写入安装日志与最终回执。
+10. 成功或失败均重新打开客户端；失败时旧版本继续可用，并展示回执中的原因。
+
+更新文件位于 `%LOCALAPPDATA%\CodexThemeStudio\updates\<version>`。完整 MSI 日志保存在事务目录的 `install.log`。
+
+## 公钥轮换
+
+`assets/update-public-key.txt` 是当前发布密钥，`assets/update-public-keys.txt` 是编译进客户端的受信任公钥环。发布私钥只能保存在发布者的离线加密备份和 GitHub Actions Secret 中。
+
+轮换时不能直接删除旧公钥：
+
+1. 先把新公钥加入公钥环。
+2. 使用旧私钥和新私钥同时签署一个过渡版本；清单的 `signatures` 数组包含两个签名。
+3. 等待主要用户升级到过渡版本。
+4. 后续版本改用新私钥；确认旧客户端占比可接受后再移除旧公钥。
+
+私钥丢失且没有提前发布包含新公钥的过渡版本时，现有客户端无法信任新更新。
+
+## 本地构建
+
+构建脚本从官方 NuGet 下载 WiX 3.14.1 便携工具链并校验固定 SHA-256，不要求管理员安装 WiX。Inno Setup 6 仅用于生成旧版桥接 EXE。
 
 ```powershell
-.\scripts\build-windows-installer.ps1 `
-  -AppVersion 2.5.1 `
-  -GitHubRepository owner/codex-theme-studio `
-  -UpdateReleaseTag latest `
-  -SignMode None
+winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --accept-package-agreements
 
+.\scripts\build-windows-installer.ps1 `
+  -AppVersion 2.6.0 `
+  -GitHubRepository WOHUPA/Amazon-Skills `
+  -UpdateReleaseTag codex-theme-studio-latest `
+  -SignMode None
+```
+
+生成清单和签名：
+
+```powershell
 .\scripts\new-update-manifest.ps1 `
-  -Version 2.5.1 `
-  -Repository owner/codex-theme-studio `
-  -ReleaseTagPrefix v `
-  -InstallerPath .\dist\Codex-Theme-Studio-Setup-2.5.1.exe `
+  -Version 2.6.0 `
+  -Repository WOHUPA/Amazon-Skills `
+  -ReleaseTagPrefix codex-theme-studio-v `
+  -InstallerPath .\dist\Codex-Theme-Studio-2.6.0-Windows-x64.msi `
+  -BridgeInstallerPath .\dist\Codex-Theme-Studio-Setup-2.6.0.exe `
   -SecretKeyPath <private-minisign-key>
 ```
 
-清单脚本会生成安装包对应的 `.minisig`，把完整签名写入 `latest.json`，并在写清单前用公开密钥回验。
+多个 `-SecretKeyPath` 会产生多个签名，用于公钥轮换过渡。
 
-仓库中的 `.github/workflows/release.yml` 会在推送 `v*` 标签后，使用 GitHub 托管的 `windows-latest` Runner 完成构建、Minisign 签署、清单生成和 GitHub Release 发布，不再依赖代码签名硬件或自托管 Runner。
+## GitHub 发布
 
-若客户端放在共享仓库，不能使用仓库级 `releases/latest`，否则其他项目的新 Release 会抢占更新端点。此时应给 Theme Studio 使用固定滚动标签，例如 `codex-theme-studio-latest`，并将版本包发布到 `codex-theme-studio-v<version>`；构建时分别传入 `-UpdateReleaseTag codex-theme-studio-latest` 与 `-ReleaseTagPrefix codex-theme-studio-v`。
+共享仓库不能使用仓库级 `releases/latest`，否则其他项目的新 Release 会抢占端点。本项目使用：
 
-首次配置仓库时，把私钥文件的原始字节做 Base64，并保存为 Actions Secret `MINISIGN_SECRET_KEY_BASE64`。不要把 Base64 文本写入仓库、Issue、Release 或构建日志。发布私钥一旦丢失，现有客户端将无法验证后续更新；至少保存一份离线加密备份。
+- 版本 Release：`codex-theme-studio-v<version>`。
+- 固定滚动清单：`codex-theme-studio-latest/latest.json`。
 
-## Windows Authenticode 的位置
+根工作流 `.github/workflows/codex-theme-studio-release.yml` 在推送 `codex-theme-studio-v*` 标签后构建 MSI 与桥接 EXE，使用 `MINISIGN_SECRET_KEY_BASE64` 签署两个安装包，发布版本资产并更新滚动清单。
 
-当前发布链不要求 Authenticode。Minisign 负责证明“更新来自 Theme Studio 发布者且没有被篡改”，但不会让 Windows 显示受信任发布者，也不会消除 SmartScreen 或 UAC 的“未知发布者”提示。
+## Windows Authenticode
 
-将来取得受 Windows 信任的证书后，可以在不改变 `latest.json`、Minisign 公钥和既有客户端升级能力的前提下，额外签名：
+Minisign 证明更新来自项目发布密钥且内容未被篡改，但不会消除 SmartScreen 的“未知发布者”提示。取得受信任代码签名证书后，应额外签名：
 
 - `CodexThemeStudio.exe`
-- `Codex-Theme-Studio-Setup-<version>.exe`
+- `CodexThemeStudio.Updater.exe`
+- MSI 和桥接 EXE
 
-现有脚本保留三种可选 Authenticode 来源：
-
-- `Store`：USB Token、HSM 或云签名 KSP 中的证书。
-- `ArtifactSigning`：Microsoft Artifact Signing。
-- `Pfx`：只用于仍允许 PFX 的旧有或私有流程，密码必须从环境变量读取。
-
-不能用自签名证书解决其他 Windows 电脑的信任问题。无证书阶段的预期行为是：安装包可正常安装和持续升级，但用户首次下载或每个新文件可能收到 SmartScreen 提示，企业策略也可能禁止绕过。取得证书后再叠加 Authenticode，不替换 Minisign 更新签名。
-
-中国个人开发者的后续可选路径：
-
-1. 有可验证企业主体时购买公开代码签名证书，选择 USB Token 或云 HSM。
-2. 通过 Microsoft Store 分发 MSIX，由 Store 负责签名和更新；直接下载的 EXE 仍需自有 Authenticode 证书。
-3. 继续 GitHub 直接下载并使用当前 Minisign 更新签名，但不得宣称 Windows“受信任发布者”。
-
-官方依据：
-
-- [Tauri Updater 签名机制](https://v2.tauri.app/plugin/updater/#signing-updates)
-- [Minisign 官方项目](https://github.com/jedisct1/minisign)
-- [SmartScreen 发布者信誉](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation)
-- [Microsoft Store 开发者账号](https://learn.microsoft.com/en-us/windows/apps/publish/partner-center/open-a-developer-account)
+不能用自签名证书解决其他电脑的 Windows 信任问题。当前无证书发布可安装和持续升级，但首次下载仍可能出现 SmartScreen，企业策略也可能禁止绕过。
 
 ## 发布验收
 
-正式发布前必须验证更新签名；Authenticode 状态在无证书阶段预期为 `NotSigned`：
+每次正式发布至少验证：
 
-```powershell
-$publicKey = (Get-Content -Raw .\assets\update-public-key.txt).Trim()
-.\build\windows\runtime\runtime\minisign.exe -Vm `
-  .\dist\Codex-Theme-Studio-Setup-2.5.1.exe `
-  -x .\dist\Codex-Theme-Studio-Setup-2.5.1.exe.minisig `
-  -P $publicKey
-
-Get-AuthenticodeSignature .\dist\Codex-Theme-Studio-Setup-2.5.1.exe
-```
-
-Minisign 必须返回成功，`latest.json` 中的 SHA-256 必须与安装包一致。随后在未安装 Node.js、未安装 PowerShell 7、没有旧 Theme Studio 状态的干净 Windows 10/11 x64 虚拟机中验证 SmartScreen 提示后的安装、切换、托盘、升级和卸载。
+1. MSI 与桥接 EXE 的 SHA-256、`.minisig` 和 `latest.json` 完全一致。
+2. 正确安装包通过，篡改一个字节后必须被拒绝。
+3. 2.5.x EXE 安装形态可以迁移到 MSI，主题和状态不丢失，旧 Inno 卸载项被清理。
+4. MSI 旧版升级到新版后只保留一个 Windows Installer 卸载项。
+5. 主程序运行时升级不会锁死；更新器能等待退出、写日志、校验版本并重新启动。
+6. 安装失败时 Windows Installer 回滚，客户端能读取失败回执并继续启动旧版本。
+7. Windows 10/11 x64 干净虚拟机上完成安装、切换、托盘、修复、升级和卸载测试。

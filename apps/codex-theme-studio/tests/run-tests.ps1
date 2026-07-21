@@ -69,14 +69,16 @@ if ($nativeClientSource -notmatch 'imageCache' -or
 }
 $desktopSources = @(
   (Join-Path $Root 'desktop\Launcher.cs'),
+  (Join-Path $Root 'desktop\Updater.cs'),
   (Join-Path $Root 'installer\CodexThemeStudio.iss'),
+  (Join-Path $Root 'installer\CodexThemeStudio.wxs'),
   (Join-Path $Scripts 'build-windows-installer.ps1'),
   (Join-Path $Scripts 'desktop-bootstrap.ps1'),
   (Join-Path $Root 'assets\studio-version.txt')
 )
 foreach ($desktopSource in $desktopSources) {
   if (-not (Test-Path -LiteralPath $desktopSource -PathType Leaf)) {
-    throw "Windows EXE packaging source is missing: $desktopSource"
+    throw "Windows packaging source is missing: $desktopSource"
   }
 }
 $iconSource = Join-Path $Root 'assets\studio-icon.png'
@@ -100,7 +102,11 @@ if ($launcherSource -notmatch 'new StudioClient' -or
   throw 'Windows launcher must host the compiled WPF window and tray without PowerShell UI processes.'
 }
 $installerSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'installer\CodexThemeStudio.iss')
-if ($installerSource -notmatch 'CodexThemeStudio.exe' -or $installerSource -notmatch 'UninstallRun') {
+$wixInstallerSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'installer\CodexThemeStudio.wxs')
+$updaterSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'desktop\Updater.cs')
+if ($installerSource -notmatch 'CodexThemeStudio.Updater.exe' -or $installerSource -notmatch 'UninstallRun' -or
+    $wixInstallerSource -notmatch 'MajorUpgrade' -or $wixInstallerSource -notmatch 'UpgradeCode' -or
+    $updaterSource -notmatch 'msiexec.exe' -or $updaterSource -notmatch 'last-result.json') {
   throw 'Windows installer does not install the launcher or register uninstall cleanup.'
 }
 $releaseWorkflow = Get-Content -Raw -LiteralPath (Join-Path $Root '.github\workflows\release.yml')
@@ -108,13 +114,16 @@ $manifestSource = Get-Content -Raw -LiteralPath (Join-Path $Scripts 'new-update-
 $updatePublicKey = (Get-Content -Raw -LiteralPath (Join-Path $Root 'assets\update-public-key.txt')).Trim()
 if ($updatePublicKey -notmatch '^RW[A-Za-z0-9+/=]{50,}$' -or
     $updateSource -notmatch 'VerifyMinisign' -or
-    $updateSource -notmatch 'UpdateTrust\.PublicKey' -or
+    $updateSource -notmatch 'UpdateTrust\.PublicKeys' -or
+    $updateSource -notmatch 'UpdaterSha256' -or
+    $updateSource -notmatch 'DownloadWithRetry' -or
     $updateSource -match 'AuthenticodeVerifier|WinVerifyTrust' -or
     $buildSource -notmatch "minisignVersion = '0\.12'" -or
     $buildSource -notmatch '5535BE9E4E123831EBE6EF324AAFE9DDE507015C176191F9E20C3AD60567F9E1' -or
-    $manifestSource -notmatch '-S -s \$secretKey' -or
+    $manifestSource -notmatch '-S -s \$signers\[\$index\]\.SecretKey' -or
     $releaseWorkflow -notmatch 'runs-on: windows-latest' -or
-    $releaseWorkflow -notmatch 'MINISIGN_SECRET_KEY_BASE64') {
+    $releaseWorkflow -notmatch 'MINISIGN_SECRET_KEY_BASE64' -or
+    $buildSource -notmatch '15D50463C73DCE31FBEA5440AC33AF47E92D54D4188166D207E9E39577B8FE0F') {
   throw 'Certificate-free signed updater contract is incomplete.'
 }
 

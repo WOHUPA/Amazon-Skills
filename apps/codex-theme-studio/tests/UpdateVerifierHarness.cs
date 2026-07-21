@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 
@@ -19,7 +20,8 @@ namespace CodexThemeStudio.Desktop
             MethodInfo verify = typeof(UpdateService).GetMethod("VerifyMinisign", BindingFlags.Instance | BindingFlags.NonPublic);
             if (verify == null) throw new MissingMethodException("UpdateService.VerifyMinisign");
 
-            verify.Invoke(service, new object[] { args[1], signature });
+            List<string> signatures = new List<string> { signature };
+            verify.Invoke(service, new object[] { args[1], signatures });
             string tampered = Path.Combine(Path.GetTempPath(), "codex-theme-studio-tampered-" + Guid.NewGuid().ToString("N") + ".exe");
             File.Copy(args[1], tampered, false);
             try
@@ -28,7 +30,7 @@ namespace CodexThemeStudio.Desktop
                     stream.WriteByte(0);
                 try
                 {
-                    verify.Invoke(service, new object[] { tampered, signature });
+                    verify.Invoke(service, new object[] { tampered, signatures });
                     Console.Error.WriteLine("tampered installer unexpectedly passed Minisign verification");
                     return 1;
                 }

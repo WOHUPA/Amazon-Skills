@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Inno Setup
+      - name: Install legacy bridge toolchain
         run: choco install innosetup --no-progress -y
 
       - name: Resolve release version
@@ -37,7 +37,7 @@ jobs:
           [IO.File]::WriteAllBytes($keyPath, [Convert]::FromBase64String($env:MINISIGN_SECRET_KEY_BASE64))
           "MINISIGN_SECRET_KEY_PATH=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Build Windows installer
+      - name: Build MSI and legacy bridge installer
         run: |
           .\scripts\build-windows-installer.ps1 `
             -AppVersion $env:RELEASE_VERSION `
@@ -51,7 +51,8 @@ jobs:
             -Version $env:RELEASE_VERSION `
             -Repository '${{ github.repository }}' `
             -ReleaseTagPrefix 'codex-theme-studio-v' `
-            -InstallerPath ".\dist\Codex-Theme-Studio-Setup-$env:RELEASE_VERSION.exe" `
+            -InstallerPath ".\dist\Codex-Theme-Studio-$env:RELEASE_VERSION-Windows-x64.msi" `
+            -BridgeInstallerPath ".\dist\Codex-Theme-Studio-Setup-$env:RELEASE_VERSION.exe" `
             -SecretKeyPath $env:MINISIGN_SECRET_KEY_PATH `
             -Notes "Codex Theme Studio $env:RELEASE_VERSION"
           .\scripts\test-update-signature.ps1 -AppVersion $env:RELEASE_VERSION
@@ -61,6 +62,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "codex-theme-studio-v$env:RELEASE_VERSION" `
+            ".\dist\Codex-Theme-Studio-$env:RELEASE_VERSION-Windows-x64.msi" `
+            ".\dist\Codex-Theme-Studio-$env:RELEASE_VERSION-Windows-x64.msi.minisig" `
             ".\dist\Codex-Theme-Studio-Setup-$env:RELEASE_VERSION.exe" `
             ".\dist\Codex-Theme-Studio-Setup-$env:RELEASE_VERSION.exe.minisig" `
             ".\dist\latest.json" `

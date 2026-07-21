@@ -1,5 +1,8 @@
 /build/
 /dist/*.exe
+/dist/*.msi
+/dist/*.minisig
+/dist/*.wixpdb
 /dist/latest.json
 /assets/studio.ico
 *.pfx

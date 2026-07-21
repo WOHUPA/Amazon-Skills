@@ -1,13 +1,13 @@
 [CmdletBinding()]
 param(
-  [string]$AppVersion = '2.5.1',
+  [string]$AppVersion = '2.6.0',
   [string]$InstallerPath,
   [string]$ManifestPath
 )
 
 $ErrorActionPreference = 'Stop'
 $root = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
-if (-not $InstallerPath) { $InstallerPath = Join-Path $root "dist\Codex-Theme-Studio-Setup-$AppVersion.exe" }
+if (-not $InstallerPath) { $InstallerPath = Join-Path $root "dist\Codex-Theme-Studio-$AppVersion-Windows-x64.msi" }
 if (-not $ManifestPath) { $ManifestPath = Join-Path $root 'dist\latest.json' }
 $installer = [System.IO.Path]::GetFullPath($InstallerPath)
 $manifestFile = [System.IO.Path]::GetFullPath($ManifestPath)
@@ -17,7 +17,7 @@ foreach ($required in @($installer, $manifestFile, $signatureFile)) {
 }
 
 $manifest = Get-Content -Raw -LiteralPath $manifestFile -Encoding UTF8 | ConvertFrom-Json
-$package = $manifest.platforms.'windows-x86_64'
+$package = $manifest.platforms.'windows-x86_64-msi'
 $actualHash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
 if ($manifest.version -cne $AppVersion -or $package.sha256 -ine $actualHash) {
   throw 'Update manifest version or SHA-256 does not match the installer.'

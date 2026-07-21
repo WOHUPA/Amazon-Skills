@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="$(var.ProductCode)"
+           Name="Codex Theme Studio"
+           Language="1033"
+           Codepage="1252"
+           Version="$(var.AppVersion)"
+           Manufacturer="Codex Theme Studio"
+           UpgradeCode="A1734C0C-4A40-4F55-968C-8A7BFBF9C924">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" Platform="x64" SummaryCodepage="1252" Description="Codex Theme Studio Windows Installer" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Codex Theme Studio is already installed." Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Property Id="ARPPRODUCTICON" Value="StudioIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/WOHUPA/Amazon-Skills" />
+    <Property Id="ARPNOREPAIR" Value="0" />
+    <Icon Id="StudioIcon" SourceFile="$(var.SetupIcon)" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="LocalProgramsFolder" Name="Programs">
+          <Directory Id="INSTALLFOLDER" Name="Codex Theme Studio" />
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuDir" Name="Codex Theme Studio" />
+      </Directory>
+      <Directory Id="DesktopFolder" />
+    </Directory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutableComponent" Guid="7BD9B640-5244-4F8B-8A24-82141AE61831" Win64="yes">
+        <File Id="MainExecutableFile" Source="$(var.SourceExe)" Name="CodexThemeStudio.exe" Checksum="yes" />
+        <RegistryValue Root="HKCU" Key="Software\CodexThemeStudio\Components" Name="MainExecutable" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+      <Component Id="UpdaterExecutableComponent" Guid="BBA1EE73-88A0-433E-9212-E642566C12E4" Win64="yes">
+        <File Id="UpdaterExecutableFile" Source="$(var.UpdaterExe)" Name="CodexThemeStudio.Updater.exe" Checksum="yes" />
+        <RegistryValue Root="HKCU" Key="Software\CodexThemeStudio\Components" Name="UpdaterExecutable" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+      <Component Id="InstallerStateComponent" Guid="4594EB12-9E0F-4D07-B030-2F0E61F174F3" Win64="yes">
+        <RegistryValue Root="HKCU" Key="Software\CodexThemeStudio" Name="Installer" Type="string" Value="MSI" KeyPath="yes" />
+        <RemoveFile Id="RemoveLegacyInnoFiles" Name="unins*" On="install" />
+        <RemoveRegistryKey Id="RemoveLegacyInnoRegistration" Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{9A418EF1-29CB-49A8-9A32-BCECE1B944A6}_is1" Action="removeOnInstall" />
+      </Component>
+      <Component Id="FolderCleanupComponent" Guid="D249FC90-1A85-4D35-82D6-EA0D3179D196" Win64="yes">
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RemoveFolder Id="RemoveLocalProgramsFolder" Directory="LocalProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\CodexThemeStudio\Components" Name="FolderCleanup" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="ProgramMenuDir">
+      <Component Id="ProgramMenuShortcutComponent" Guid="B52DAD0B-4754-4696-A9A9-D7F537E96D0E">
+        <Shortcut Id="ProgramMenuShortcut" Name="Codex Theme Studio" Target="[INSTALLFOLDER]CodexThemeStudio.exe" WorkingDirectory="INSTALLFOLDER" Icon="StudioIcon" />
+        <RemoveFolder Id="RemoveProgramMenuDir" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\CodexThemeStudio" Name="ProgramMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcutComponent" Guid="13090DC5-9F11-43D7-9D3C-6D935E010F50">
+        <Shortcut Id="DesktopShortcut" Name="Codex Theme Studio" Target="[INSTALLFOLDER]CodexThemeStudio.exe" WorkingDirectory="INSTALLFOLDER" Icon="StudioIcon" />
+        <RegistryValue Root="HKCU" Key="Software\CodexThemeStudio" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="ProductFeature" Title="Codex Theme Studio" Level="1">
+      <ComponentRef Id="MainExecutableComponent" />
+      <ComponentRef Id="UpdaterExecutableComponent" />
+      <ComponentRef Id="InstallerStateComponent" />
+      <ComponentRef Id="FolderCleanupComponent" />
+      <ComponentRef Id="ProgramMenuShortcutComponent" />
+      <ComponentRef Id="DesktopShortcutComponent" />
+    </Feature>
+
+    <CustomAction Id="PrepareUninstall"
+                  FileKey="MainExecutableFile"
+                  ExeCommand="--prepare-uninstall --no-ui"
+                  Execute="deferred"
+                  Impersonate="yes"
+                  Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="PrepareUninstall" Before="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
+    </InstallExecuteSequence>
+
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <UIRef Id="WixUI_Minimal" />
+  </Product>
+</Wix>

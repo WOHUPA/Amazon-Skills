@@ -4,4 +4,6 @@ A Windows runtime for pure-data Theme Pack v2 packages. It applies backgrounds, 
 
 Use `scripts/theme-studio.ps1` with `list`, `preview`, `import`, `activate`, `rollback`, `pause`, `resume`, `verify`, `restore`, `install`, or `update`. Runtime state lives below `%LOCALAPPDATA%\CodexThemeStudio`.
 
+Windows releases use a WiX MSI with a transactional helper updater. A temporary Inno Setup EXE bridge remains available for upgrades from the 2.5.x install line. Update artifacts require SHA-256 and Minisign verification before Windows Installer is started.
+
 PR and release evidence gates use `node scripts/injector.mjs --visual-gate pr|release --evidence-dir <directory>`. Every case requires a screenshot, component rectangles, computed styles, and contrast results.

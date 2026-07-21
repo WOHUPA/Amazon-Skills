@@ -14,15 +14,15 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("Codex Theme Studio")]
 [assembly: AssemblyProduct("Codex Theme Studio")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("2.5.1.0")]
-[assembly: AssemblyFileVersion("2.5.1.0")]
-[assembly: AssemblyInformationalVersion("2.5.1")]
+[assembly: AssemblyVersion("2.6.0.0")]
+[assembly: AssemblyFileVersion("2.6.0.0")]
+[assembly: AssemblyInformationalVersion("2.6.0")]
 
 namespace CodexThemeStudio.Desktop
 {
     internal static class Program
     {
-        private const string AppVersion = "2.5.1";
+        private const string AppVersion = "2.6.0";
         private const string RuntimeResource = "CodexThemeStudio.Runtime.zip";
         private static readonly string StateRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

@@ -12,19 +12,19 @@
 - 活动主题：`%LOCALAPPDATA%\CodexThemeStudio\active-theme`
 - 状态/备份/日志：`state.json`、`backups`、`logs`
 
-## Windows EXE 安装包
+## Windows MSI 安装包
 
-面向普通用户的正式分发物是单个 Windows Setup EXE，安装形态参考 CC Switch：应用安装到用户的 Local Programs，创建桌面和开始菜单入口，并登记到 Windows“已安装的应用”。启动器内嵌经过验证的 Theme Studio 运行时；升级时使用 staging/backup 原子替换，主题仓库和用户状态独立保留。
+面向普通用户的正式分发物是 WiX MSI，应用安装到用户的 Local Programs，创建桌面和开始菜单入口，并由 Windows Installer 登记、修复、升级和卸载。启动器内嵌经过验证的 Theme Studio 运行时；主题仓库和用户状态独立保留。
 
 ```powershell
-# 首次构建前安装 Inno Setup 6
+# Inno Setup 6 只用于给 2.5.x 用户生成兼容桥接 EXE；WiX 由构建脚本按哈希下载
 winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --accept-package-agreements
 
-# 生成 dist\Codex-Theme-Studio-Setup-2.5.1.exe
+# 同时生成主 MSI 与兼容桥接 EXE
 & .\scripts\build-windows-installer.ps1
 ```
 
-持续升级采用与 CC Switch 相同的 GitHub Release `latest.json` 拓扑：版本比较、平台包选择、下载和原位安装；每个安装包都必须通过 SHA-256 和客户端内置公钥的 Minisign/Ed25519 签名验证。Windows Authenticode 暂不作为发布前置条件，将来可在不改变更新协议的情况下叠加。GitHub 自动发布和密钥配置见 [`docs/windows-release.md`](docs/windows-release.md)。
+持续升级采用 GitHub Release `latest.json`：2.5.x 读取桥接 EXE，新客户端读取 MSI。独立更新器会等待主程序退出，二次验证 SHA-256 与 Minisign，调用 Windows Installer，记录安装日志和结果回执，再校验实际程序版本。Windows Authenticode 暂不作为发布前置条件，将来可在不改变更新协议的情况下叠加。GitHub 自动发布和密钥配置见 [`docs/windows-release.md`](docs/windows-release.md)。
 
 卸载会先恢复官方外观并删除运行时引擎，但默认保留 `%LOCALAPPDATA%\CodexThemeStudio\themes`、备份和状态数据，便于重装后恢复。安装包不修改 WindowsApps、`app.asar`、官方签名或认证数据。
 

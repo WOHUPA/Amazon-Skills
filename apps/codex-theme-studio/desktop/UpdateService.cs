@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 
@@ -19,8 +20,28 @@ namespace CodexThemeStudio.Desktop
         public string Url;
         public string Sha256;
         public string Signature;
+        public List<string> Signatures = new List<string>();
         public string Message;
         public string Repository;
+    }
+
+    internal sealed class UpdateTransaction
+    {
+        public int SchemaVersion { get; set; }
+        public string Status { get; set; }
+        public string Version { get; set; }
+        public string InstallerPath { get; set; }
+        public string Sha256 { get; set; }
+        public string Signature { get; set; }
+        public string[] Signatures { get; set; }
+        public string AppPath { get; set; }
+        public string EngineRoot { get; set; }
+        public string CreatedAt { get; set; }
+        public string StartedAt { get; set; }
+        public string CompletedAt { get; set; }
+        public int ExitCode { get; set; }
+        public string Message { get; set; }
+        public string LogPath { get; set; }
     }
 
     internal sealed class UpdateService
@@ -43,6 +64,23 @@ namespace CodexThemeStudio.Desktop
             return Task.Run(delegate { return Check(); });
         }
 
+        public string ConsumeLastUpdateMessage()
+        {
+            string path = Path.Combine(stateRoot, "updates", "last-result.json");
+            Dictionary<string, object> result = ReadObject(path);
+            if (result == null) return string.Empty;
+            try { File.Delete(path); } catch { }
+            string status = GetString(result, "Status");
+            string version = GetString(result, "Version");
+            string message = GetString(result, "Message");
+            if (string.Equals(status, "installed", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(version, currentVersion, StringComparison.OrdinalIgnoreCase))
+                return "已升级到 " + version + "。" + (string.IsNullOrWhiteSpace(message) ? string.Empty : " " + message);
+            if (string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase))
+                return "上次更新失败：" + (string.IsNullOrWhiteSpace(message) ? "请查看更新日志。" : message);
+            return string.Empty;
+        }
+
         public async Task<string> DownloadAndVerifyAsync(UpdateCheckResult update)
         {
             if (update == null || !update.UpdateAvailable) throw new InvalidOperationException("没有可安装的更新。");
@@ -56,25 +94,19 @@ namespace CodexThemeStudio.Desktop
             string updateRoot = Path.Combine(stateRoot, "updates", update.Version);
             Directory.CreateDirectory(updateRoot);
             string fileName = Path.GetFileName(uri.AbsolutePath);
-            if (string.IsNullOrWhiteSpace(fileName) || !fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("更新包必须是 Windows EXE 安装程序。");
+            if (string.IsNullOrWhiteSpace(fileName) || !fileName.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("更新包必须是 Windows MSI 安装程序。");
             string destination = Path.Combine(updateRoot, fileName);
             string partial = destination + ".download";
-            try { if (File.Exists(partial)) File.Delete(partial); } catch { }
 
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-            using (WebClient client = new WebClient())
-            {
-                client.Headers[HttpRequestHeader.UserAgent] = "Codex-Theme-Studio/" + currentVersion;
-                await client.DownloadFileTaskAsync(uri, partial);
-            }
+            await Task.Run(delegate { DownloadWithRetry(uri, partial); });
             string actualHash = ComputeSha256(partial);
             if (!string.Equals(actualHash, NormalizeHash(update.Sha256), StringComparison.OrdinalIgnoreCase))
             {
                 File.Delete(partial);
                 throw new InvalidDataException("更新包 SHA-256 校验失败。");
             }
-            VerifyMinisign(partial, update.Signature);
+            VerifyMinisign(partial, update.Signatures);
             if (File.Exists(destination)) File.Delete(destination);
             File.Move(partial, destination);
             return destination;
@@ -83,14 +115,48 @@ namespace CodexThemeStudio.Desktop
         public void StartInstaller(string installerPath, UpdateCheckResult update)
         {
             if (update == null) throw new ArgumentNullException("update");
+            if (!installerPath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("独立更新程序只接受 MSI 安装包。");
             string actualHash = ComputeSha256(installerPath);
             if (!string.Equals(actualHash, NormalizeHash(update.Sha256), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("更新包在安装前发生变化。");
-            VerifyMinisign(installerPath, update.Signature);
-            ProcessStartInfo start = new ProcessStartInfo();
-            start.FileName = installerPath;
-            start.Arguments = "/VERYSILENT /NORESTART /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS";
-            start.UseShellExecute = true;
+            VerifyMinisign(installerPath, update.Signatures);
+
+            string updateRoot = Path.GetDirectoryName(Path.GetFullPath(installerPath));
+            string installedUpdater = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CodexThemeStudio.Updater.exe");
+            if (!File.Exists(installedUpdater)) throw new FileNotFoundException("独立更新程序缺失。", installedUpdater);
+            if (!string.Equals(ComputeSha256(installedUpdater), UpdateTrust.UpdaterSha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("独立更新程序完整性校验失败。");
+            string updater = Path.Combine(updateRoot, "CodexThemeStudio.Updater.exe");
+            File.Copy(installedUpdater, updater, true);
+            if (!string.Equals(ComputeSha256(updater), UpdateTrust.UpdaterSha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("复制后的独立更新程序完整性校验失败。");
+
+            string transactionPath = Path.Combine(updateRoot, "transaction.json");
+            UpdateTransaction transaction = new UpdateTransaction
+            {
+                SchemaVersion = 1,
+                Status = "pending",
+                Version = update.Version,
+                InstallerPath = Path.GetFullPath(installerPath),
+                Sha256 = update.Sha256,
+                Signature = update.Signature,
+                Signatures = update.Signatures.ToArray(),
+                AppPath = Process.GetCurrentProcess().MainModule.FileName,
+                EngineRoot = engineRoot,
+                CreatedAt = DateTime.UtcNow.ToString("o"),
+                Message = "等待主程序退出。"
+            };
+            WriteJsonAtomic(transactionPath, serializer.Serialize(transaction));
+
+            ProcessStartInfo start = new ProcessStartInfo
+            {
+                FileName = updater,
+                Arguments = "--transaction " + QuoteArgument(transactionPath) + " --parent-pid " + Process.GetCurrentProcess().Id,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = updateRoot
+            };
             Process.Start(start);
         }
 
@@ -121,13 +187,26 @@ namespace CodexThemeStudio.Desktop
             Version local;
             if (!Version.TryParse(version, out remote) || !Version.TryParse(currentVersion, out local))
                 throw new InvalidDataException("更新清单版本号无效。");
+            if (remote <= local)
+            {
+                return new UpdateCheckResult
+                {
+                    Enabled = true,
+                    UpdateAvailable = false,
+                    Version = version,
+                    Notes = GetString(feed, "notes"),
+                    Message = "当前已是最新版本 " + currentVersion
+                };
+            }
             Dictionary<string, object> platforms = GetObject(feed, "platforms");
             Dictionary<string, object> package = GetObject(platforms, platform);
             string url = GetString(package, "url");
             string sha256 = GetString(package, "sha256");
-            string signature = GetString(package, "signature");
-            if (string.IsNullOrWhiteSpace(url) || NormalizeHash(sha256).Length != 64 ||
-                string.IsNullOrWhiteSpace(signature) || signature.Length > 4096)
+            List<string> signatures = GetStrings(package, "signatures");
+            string legacySignature = GetString(package, "signature");
+            if (!string.IsNullOrWhiteSpace(legacySignature) && !signatures.Contains(legacySignature)) signatures.Insert(0, legacySignature);
+            if (string.IsNullOrWhiteSpace(url) || NormalizeHash(sha256).Length != 64 || signatures.Count == 0 ||
+                signatures.Exists(delegate(string value) { return string.IsNullOrWhiteSpace(value) || value.Length > 4096; }))
                 throw new InvalidDataException("Windows 更新包缺少 URL、SHA-256 或 Minisign 签名。");
             return new UpdateCheckResult
             {
@@ -137,60 +216,105 @@ namespace CodexThemeStudio.Desktop
                 Notes = GetString(feed, "notes"),
                 Url = url,
                 Sha256 = sha256,
-                Signature = signature,
+                Signature = signatures[0],
+                Signatures = signatures,
                 Repository = repository,
                 Message = remote > local ? "发现新版本 " + version : "当前已是最新版本 " + currentVersion
             };
         }
 
-        private void VerifyMinisign(string path, string signature)
+        private static void DownloadWithRetry(Uri uri, string partial)
+        {
+            Exception lastError = null;
+            for (int attempt = 1; attempt <= 3; attempt++)
+            {
+                try
+                {
+                    DownloadOnce(uri, partial);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                    if (attempt < 3) Thread.Sleep(attempt * 1000);
+                }
+            }
+            throw new IOException("更新包下载重试三次后仍然失败。", lastError);
+        }
+
+        private static void DownloadOnce(Uri uri, string partial)
+        {
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            long existingLength = File.Exists(partial) ? new FileInfo(partial).Length : 0;
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+            request.UserAgent = "Codex-Theme-Studio-Updater";
+            request.AllowAutoRedirect = true;
+            request.Timeout = 30000;
+            request.ReadWriteTimeout = 30000;
+            if (existingLength > 0) request.AddRange(existingLength);
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                bool append = existingLength > 0 && response.StatusCode == HttpStatusCode.PartialContent;
+                using (Stream input = response.GetResponseStream())
+                using (FileStream output = new FileStream(partial, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    byte[] buffer = new byte[1024 * 128];
+                    int read;
+                    while ((read = input.Read(buffer, 0, buffer.Length)) > 0) output.Write(buffer, 0, read);
+                    output.Flush(true);
+                }
+            }
+        }
+
+        private void VerifyMinisign(string path, IEnumerable<string> signatures)
         {
             string verifier = Path.Combine(engineRoot, "runtime", "minisign.exe");
             if (!File.Exists(verifier)) throw new InvalidDataException("更新签名验证器缺失。");
             if (!string.Equals(ComputeSha256(verifier), UpdateTrust.VerifierSha256, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("更新签名验证器完整性校验失败。");
-            if (string.IsNullOrWhiteSpace(signature)) throw new InvalidDataException("更新包缺少 Minisign 签名。");
 
-            string signaturePath = path + "." + Guid.NewGuid().ToString("N") + ".minisig";
-            try
+            foreach (string signature in signatures)
             {
-                using (FileStream stream = new FileStream(signaturePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                using (StreamWriter writer = new StreamWriter(stream, new UTF8Encoding(false)))
-                    writer.Write(signature.Replace("\r\n", "\n"));
-
-                ProcessStartInfo start = new ProcessStartInfo();
-                start.FileName = verifier;
-                start.Arguments = "-V -q -m " + QuoteArgument(path) + " -x " + QuoteArgument(signaturePath) +
-                    " -P " + QuoteArgument(UpdateTrust.PublicKey);
-                start.UseShellExecute = false;
-                start.CreateNoWindow = true;
-                start.RedirectStandardOutput = true;
-                start.RedirectStandardError = true;
-                using (Process process = Process.Start(start))
+                string signaturePath = path + "." + Guid.NewGuid().ToString("N") + ".minisig";
+                try
                 {
-                    Task<string> standardOutputTask = process.StandardOutput.ReadToEndAsync();
-                    Task<string> standardErrorTask = process.StandardError.ReadToEndAsync();
-                    if (!process.WaitForExit(30000))
+                    using (FileStream stream = new FileStream(signaturePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    using (StreamWriter writer = new StreamWriter(stream, new UTF8Encoding(false)))
+                        writer.Write(signature.Replace("\r\n", "\n"));
+                    foreach (string publicKey in UpdateTrust.PublicKeys)
                     {
-                        try { process.Kill(); } catch { }
-                        throw new InvalidDataException("更新签名验证超时。");
-                    }
-                    Task.WaitAll(new Task[] { standardOutputTask, standardErrorTask }, 2000);
-                    if (process.ExitCode != 0)
-                    {
-                        string standardOutput = standardOutputTask.IsCompleted ? standardOutputTask.Result : string.Empty;
-                        string standardError = standardErrorTask.IsCompleted ? standardErrorTask.Result : string.Empty;
-                        string detail = string.IsNullOrWhiteSpace(standardError) ? standardOutput : standardError;
-                        detail = (detail ?? string.Empty).Trim();
-                        if (detail.Length > 240) detail = detail.Substring(0, 240);
-                        throw new InvalidDataException("更新包 Minisign 签名无效。" + (detail.Length == 0 ? string.Empty : " " + detail));
+                        ProcessStartInfo start = new ProcessStartInfo
+                        {
+                            FileName = verifier,
+                            Arguments = "-V -q -m " + QuoteArgument(path) + " -x " + QuoteArgument(signaturePath) + " -P " + QuoteArgument(publicKey),
+                            UseShellExecute = false,
+                            CreateNoWindow = true,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true
+                        };
+                        using (Process process = Process.Start(start))
+                        {
+                            Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+                            Task<string> errorTask = process.StandardError.ReadToEndAsync();
+                            if (!process.WaitForExit(30000)) { try { process.Kill(); } catch { } continue; }
+                            Task.WaitAll(new Task[] { outputTask, errorTask }, 2000);
+                            if (process.ExitCode == 0) return;
+                        }
                     }
                 }
+                finally
+                {
+                    try { if (File.Exists(signaturePath)) File.Delete(signaturePath); } catch { }
+                }
             }
-            finally
-            {
-                try { if (File.Exists(signaturePath)) File.Delete(signaturePath); } catch { }
-            }
+            throw new InvalidDataException("更新包 Minisign 签名无效。");
+        }
+
+        private static void WriteJsonAtomic(string path, string json)
+        {
+            string temporary = path + ".tmp";
+            File.WriteAllText(temporary, json, new UTF8Encoding(false));
+            if (File.Exists(path)) File.Replace(temporary, path, null); else File.Move(temporary, path);
         }
 
         private static string QuoteArgument(string value)
@@ -234,6 +358,16 @@ namespace CodexThemeStudio.Desktop
         private static string GetString(Dictionary<string, object> source, string key)
         {
             return source != null && source.ContainsKey(key) && source[key] != null ? Convert.ToString(source[key]) : string.Empty;
+        }
+
+        private static List<string> GetStrings(Dictionary<string, object> source, string key)
+        {
+            List<string> values = new List<string>();
+            if (source == null || !source.ContainsKey(key)) return values;
+            object[] items = source[key] as object[];
+            if (items == null) return values;
+            foreach (object item in items) if (item != null) values.Add(Convert.ToString(item));
+            return values;
         }
 
         private static string ComputeSha256(string path)

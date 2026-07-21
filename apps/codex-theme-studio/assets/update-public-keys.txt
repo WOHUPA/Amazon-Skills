@@ -1,0 +1,2 @@
+# 每行一个受信任的 Minisign 公钥。发布新密钥前，先用旧密钥签署包含新公钥的过渡版本。
+RWQJBP0FS8icVjX1THFrEL/FcFi2jGoj7AMWKDGxFptMWYgYSXxMiPjc

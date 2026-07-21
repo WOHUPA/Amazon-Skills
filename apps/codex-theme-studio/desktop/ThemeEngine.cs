@@ -16,7 +16,7 @@ namespace CodexThemeStudio.Desktop
 {
     internal sealed class NativeThemeEngine : IDisposable
     {
-        private const string AppVersion = "2.5.1";
+        private const string AppVersion = "2.6.0";
         private const string CodexAppUserModelId = "OpenAI.Codex_2p2nqsd0c76g0!App";
         private readonly string stateRoot;
         private readonly string engineRoot;

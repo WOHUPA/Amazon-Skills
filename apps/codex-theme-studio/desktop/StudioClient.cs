@@ -39,7 +39,7 @@ namespace CodexThemeStudio.Desktop
 
     internal sealed class StudioClient : IDisposable
     {
-        private const string AppVersion = "2.5.1";
+        private const string AppVersion = "2.6.0";
         private readonly string stateRoot;
         private readonly string engineRoot;
         private readonly NativeThemeEngine engine;
@@ -215,7 +215,8 @@ namespace CodexThemeStudio.Desktop
             RefreshState();
             themeStorePath.Text = Path.Combine(stateRoot, "themes");
             enginePath.Text = engineRoot;
-            CheckForUpdates(false);
+            string updateResult = updateService.ConsumeLastUpdateMessage();
+            if (string.IsNullOrWhiteSpace(updateResult)) CheckForUpdates(false); else updateStatus.Text = updateResult;
         }
 
         public async void CheckForUpdates(bool interactive)
@@ -238,7 +239,7 @@ namespace CodexThemeStudio.Desktop
                     return;
                 }
                 MessageBoxResult choice = System.Windows.MessageBox.Show(
-                    "发现 Codex Theme Studio " + update.Version + "。是否从 GitHub Releases 下载、验证更新签名并安装？",
+                    "发现 Codex Theme Studio " + update.Version + "。是否从 GitHub Releases 下载、验证 MSI 更新签名并安装？",
                     "软件更新",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Information);

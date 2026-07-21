@@ -1,8 +1,11 @@
 #ifndef AppVersion
-  #define AppVersion "2.5.1"
+  #define AppVersion "2.6.0"
 #endif
 #ifndef SourceExe
   #error SourceExe must point to the compiled CodexThemeStudio.exe
+#endif
+#ifndef UpdaterExe
+  #error UpdaterExe must point to the compiled CodexThemeStudio.Updater.exe
 #endif
 #ifndef OutputDir
   #define OutputDir "..\dist"
@@ -49,6 +52,7 @@ Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: 
 
 [Files]
 Source: "{#SourceExe}"; DestDir: "{app}"; DestName: "CodexThemeStudio.exe"; Flags: ignoreversion
+Source: "{#UpdaterExe}"; DestDir: "{app}"; DestName: "CodexThemeStudio.Updater.exe"; Flags: ignoreversion
 
 [InstallDelete]
 ; Remove the legacy PowerShell launcher created before the native client split.
