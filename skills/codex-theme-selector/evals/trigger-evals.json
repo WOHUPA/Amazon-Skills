@@ -1,0 +1,16 @@
+{
+  "skill":"codex-theme-selector",
+  "cases":[
+    {"query":"检查 Codex Theme Studio 客户端是否已经安装。","should_trigger":true},
+    {"query":"列出 Codex Theme Studio 里的主题并预览。","should_trigger":true},
+    {"query":"把 D:\\themes\\aurora.codextheme 导入 Theme Studio，但先不要激活。","should_trigger":true},
+    {"query":"检查 Theme Studio 原生引擎版本和自愈状态。","should_trigger":true},
+    {"query":"切换到 obsidian-gold 并验证。","should_trigger":true},
+    {"query":"回退到上一个主题。","should_trigger":true},
+    {"query":"暂停主题显示官方外观，主题文件保留。","should_trigger":true},
+    {"query":"帮我安装或更新 Codex Theme Studio 客户端。","should_trigger":false},
+    {"query":"生成一套新的深浅 Codex 主题。","should_trigger":false},
+    {"query":"迁移旧 CodexDreamSkin v1 主题。","should_trigger":false},
+    {"query":"Codex 官方深色模式在哪里设置。","should_trigger":false}
+  ]
+}

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$AppVersion = '2.6.1',
+  [string]$AppVersion = '2.7.0',
   [string]$GitHubRepository = '',
   [string]$UpdateReleaseTag = 'latest',
   [string]$NodeVersion = '24.18.0',
@@ -20,6 +20,11 @@ $distRoot = Join-Path $root 'dist'
 $launcherSource = Join-Path $root 'desktop\Launcher.cs'
 $clientSource = Join-Path $root 'desktop\StudioClient.cs'
 $engineSource = Join-Path $root 'desktop\ThemeEngine.cs'
+$catalogSource = Join-Path $root 'desktop\ThemeCatalog.cs'
+$bundleSource = Join-Path $root 'desktop\BundleManager.cs'
+$supervisorSource = Join-Path $root 'desktop\RuntimeSupervisor.cs'
+$assetCacheSource = Join-Path $root 'desktop\RuntimeAssetCache.cs'
+$channelSource = Join-Path $root 'desktop\SingleInstanceChannel.cs'
 $updateSource = Join-Path $root 'desktop\UpdateService.cs'
 $updaterSource = Join-Path $root 'desktop\Updater.cs'
 $updatePublicKeyFile = Join-Path $root 'assets\update-public-key.txt'
@@ -37,7 +42,7 @@ $presentationFramework = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_M
 $windowsBase = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\WindowsBase' -Recurse -Filter WindowsBase.dll -ErrorAction Stop | Select-Object -First 1).FullName
 $systemXaml = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xaml' -Recurse -Filter System.Xaml.dll -ErrorAction Stop | Select-Object -First 1).FullName
 
-foreach ($required in @($launcherSource, $clientSource, $engineSource, $updateSource, $updaterSource, $updatePublicKeyFile, $updatePublicKeysFile, $installerSource, $wixSource, $licenseRtf, $versionFile, $iconSource, $signScript,$csc,$presentationCore,$presentationFramework,$windowsBase,$systemXaml)) {
+foreach ($required in @($launcherSource, $clientSource, $engineSource, $catalogSource, $bundleSource, $supervisorSource, $assetCacheSource, $channelSource, $updateSource, $updaterSource, $updatePublicKeyFile, $updatePublicKeysFile, $installerSource, $wixSource, $licenseRtf, $versionFile, $iconSource, $signScript,$csc,$presentationCore,$presentationFramework,$windowsBase,$systemXaml)) {
   if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
     throw "Windows installer build dependency is missing: $required"
   }
@@ -107,6 +112,10 @@ New-StudioIcon -SourcePath $iconSource -Path $runtimeIcon
 
 foreach ($directory in @('assets','presets','references')) {
   Copy-Item -LiteralPath (Join-Path $root $directory) -Destination $payloadRoot -Recurse -Force
+}
+$legacyPayload = Join-Path $payloadRoot 'presets\legacy'
+if (Test-Path -LiteralPath $legacyPayload -PathType Container) {
+  [System.IO.Directory]::Delete($legacyPayload, $true)
 }
 # The installed client is .NET-native. Legacy preset scripts remain source
 # references only and must never be shipped as executable PowerShell payloads.
@@ -273,7 +282,7 @@ $compilerArgs = @(
   '/reference:System.Drawing.dll', "/reference:$systemXaml",
   "/reference:$windowsBase", "/reference:$presentationCore", "/reference:$presentationFramework",
   '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll',
-  $launcherSource, $clientSource, $engineSource, $updateSource, $updateTrustSource
+  $launcherSource, $clientSource, $engineSource, $catalogSource, $bundleSource, $supervisorSource, $assetCacheSource, $channelSource, $updateSource, $updateTrustSource
 )
 & $csc @compilerArgs
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $launcher -PathType Leaf)) {

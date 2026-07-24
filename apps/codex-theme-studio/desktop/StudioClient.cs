@@ -28,6 +28,7 @@ namespace CodexThemeStudio.Desktop
         public string Layout;
         public string Directory;
         public string BackgroundPath;
+        public string SeriesId;
     }
 
     internal sealed class EngineCommandResult
@@ -39,19 +40,26 @@ namespace CodexThemeStudio.Desktop
 
     internal sealed class StudioClient : IDisposable
     {
-        private const string AppVersion = "2.6.1";
+        private const string AppVersion = "2.7.0";
+        private const int ThemePageSize = 18;
         private readonly string stateRoot;
         private readonly string engineRoot;
         private readonly NativeThemeEngine engine;
+        private readonly RuntimeSupervisor supervisor;
+        private readonly RuntimeAssetCache assetCache;
         private readonly UpdateService updateService;
         private readonly JavaScriptSerializer serializer = new JavaScriptSerializer();
         private readonly List<ThemeItem> themes = new List<ThemeItem>();
         private readonly Dictionary<string, BitmapSource> imageCache = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
+        private readonly Queue<string> imageCacheOrder = new Queue<string>();
+        private readonly object imageCacheSync = new object();
         private readonly DispatcherTimer progressTimer;
         private Window window;
         private ThemeItem selectedTheme;
         private string currentThemeId = string.Empty;
         private string filter = "all";
+        private string selectedSeriesId = ThemeCatalog.AllSeriesId;
+        private int themePageStart;
         private CancellationTokenSource operationCancellation;
         private DateTime operationStartedAt;
         private bool exitRequested;
@@ -68,6 +76,11 @@ namespace CodexThemeStudio.Desktop
         private Grid runtimePage;
         private Grid settingsPage;
         private Button createThemeButton;
+        private Button importThemeButton;
+        private StackPanel seriesStrip;
+        private Button newSeriesButton;
+        private Button renameSeriesButton;
+        private Button deleteSeriesButton;
         private TextBox searchBox;
         private TextBlock searchHint;
         private Button allFilter;
@@ -82,6 +95,7 @@ namespace CodexThemeStudio.Desktop
         private Button heroPreviewButton;
         private Button heroBackgroundButton;
         private Button heroDeleteButton;
+        private Button heroMoveButton;
         private TextBlock themeCountLabel;
         private ScrollViewer themeScroll;
         private StackPanel themeStrip;
@@ -96,6 +110,7 @@ namespace CodexThemeStudio.Desktop
         private TextBlock runtimeLabel;
         private TextBlock currentThemeValue;
         private TextBlock runtimeModeValue;
+        private TextBlock runtimeDetailValue;
         private Button pauseButton;
         private Button resumeButton;
         private Button runtimeVerifyButton;
@@ -111,6 +126,8 @@ namespace CodexThemeStudio.Desktop
             this.stateRoot = stateRoot;
             this.engineRoot = engineRoot;
             engine = new NativeThemeEngine(stateRoot, engineRoot);
+            supervisor = new RuntimeSupervisor(engine);
+            assetCache = new RuntimeAssetCache(stateRoot);
             updateService = new UpdateService(stateRoot, engineRoot, AppVersion);
             serializer.MaxJsonLength = 16 * 1024 * 1024;
             LoadWindow();
@@ -119,6 +136,7 @@ namespace CodexThemeStudio.Desktop
             progressTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Normal, UpdateProgress, window.Dispatcher);
             progressTimer.Stop();
             window.Loaded += WindowLoaded;
+            supervisor.HealthChanged += SupervisorHealthChanged;
         }
 
         public Window Window { get { return window; } }
@@ -150,15 +168,17 @@ namespace CodexThemeStudio.Desktop
             minimizeButton = Find<Button>("MinimizeButton"); maximizeButton = Find<Button>("MaximizeButton"); closeButton = Find<Button>("CloseButton");
             themesNav = Find<Button>("ThemesNav"); runtimeNav = Find<Button>("RuntimeNav"); settingsNav = Find<Button>("SettingsNav");
             themesPage = Find<Grid>("ThemesPage"); runtimePage = Find<Grid>("RuntimePage"); settingsPage = Find<Grid>("SettingsPage");
-            createThemeButton = Find<Button>("CreateThemeButton"); searchBox = Find<TextBox>("SearchBox"); searchHint = Find<TextBlock>("SearchHint");
+            createThemeButton = Find<Button>("CreateThemeButton"); importThemeButton = Find<Button>("ImportThemeButton"); searchBox = Find<TextBox>("SearchBox"); searchHint = Find<TextBlock>("SearchHint");
+            seriesStrip = Find<StackPanel>("SeriesStrip"); newSeriesButton = Find<Button>("NewSeriesButton"); renameSeriesButton = Find<Button>("RenameSeriesButton"); deleteSeriesButton = Find<Button>("DeleteSeriesButton");
             allFilter = Find<Button>("AllFilter"); darkFilter = Find<Button>("DarkFilter"); lightFilter = Find<Button>("LightFilter");
             heroContent = Find<Grid>("HeroContent"); heroImage = Find<Image>("HeroImage"); heroName = Find<TextBlock>("HeroName");
             heroMeta = Find<TextBlock>("HeroMeta"); heroDescription = Find<TextBlock>("HeroDescription"); heroApplyButton = Find<Button>("HeroApplyButton"); heroPreviewButton = Find<Button>("HeroPreviewButton");
             heroBackgroundButton = Find<Button>("HeroBackgroundButton"); heroDeleteButton = Find<Button>("HeroDeleteButton");
+            heroMoveButton = Find<Button>("HeroMoveButton");
             themeCountLabel = Find<TextBlock>("ThemeCountLabel"); themeScroll = Find<ScrollViewer>("ThemeScroll"); themeStrip = Find<StackPanel>("ThemeStrip");
             scrollLeftButton = Find<Button>("ScrollLeftButton"); scrollRightButton = Find<Button>("ScrollRightButton");
             activityDock = Find<Border>("ActivityDock"); busyBar = Find<ProgressBar>("BusyBar"); operationTitle = Find<TextBlock>("OperationTitle"); progressText = Find<TextBlock>("ProgressText"); cancelOperationButton = Find<Button>("CancelOperationButton");
-            runtimeDot = Find<Ellipse>("RuntimeDot"); runtimeLabel = Find<TextBlock>("RuntimeLabel"); currentThemeValue = Find<TextBlock>("CurrentThemeValue"); runtimeModeValue = Find<TextBlock>("RuntimeModeValue");
+            runtimeDot = Find<Ellipse>("RuntimeDot"); runtimeLabel = Find<TextBlock>("RuntimeLabel"); currentThemeValue = Find<TextBlock>("CurrentThemeValue"); runtimeModeValue = Find<TextBlock>("RuntimeModeValue"); runtimeDetailValue = Find<TextBlock>("RuntimeDetailValue");
             pauseButton = Find<Button>("PauseButton"); resumeButton = Find<Button>("ResumeButton"); runtimeVerifyButton = Find<Button>("RuntimeVerifyButton"); rollbackButton = Find<Button>("RollbackButton"); restoreButton = Find<Button>("RestoreButton");
             themeStorePath = Find<TextBlock>("ThemeStorePath"); enginePath = Find<TextBlock>("EnginePath");
             updateStatus = Find<TextBlock>("UpdateStatus"); checkUpdateButton = Find<Button>("CheckUpdateButton");
@@ -193,17 +213,35 @@ namespace CodexThemeStudio.Desktop
             themesNav.Click += delegate { ShowPage("themes"); };
             runtimeNav.Click += delegate { ShowPage("runtime"); };
             settingsNav.Click += delegate { ShowPage("settings"); };
-            searchBox.TextChanged += delegate { searchHint.Visibility = string.IsNullOrWhiteSpace(searchBox.Text) ? Visibility.Visible : Visibility.Collapsed; RefreshCards(); };
-            allFilter.Click += delegate { filter = "all"; RefreshCards(); };
-            darkFilter.Click += delegate { filter = "dark"; RefreshCards(); };
-            lightFilter.Click += delegate { filter = "light"; RefreshCards(); };
-            scrollLeftButton.Click += delegate { themeScroll.ScrollToHorizontalOffset(Math.Max(0, themeScroll.HorizontalOffset - 444)); };
-            scrollRightButton.Click += delegate { themeScroll.ScrollToHorizontalOffset(themeScroll.HorizontalOffset + 444); };
+            searchBox.TextChanged += delegate
+            {
+                searchHint.Visibility = string.IsNullOrWhiteSpace(searchBox.Text) ? Visibility.Visible : Visibility.Collapsed;
+                themePageStart = 0;
+                RefreshCards();
+            };
+            allFilter.Click += delegate { filter = "all"; themePageStart = 0; RefreshCards(); };
+            darkFilter.Click += delegate { filter = "dark"; themePageStart = 0; RefreshCards(); };
+            lightFilter.Click += delegate { filter = "light"; themePageStart = 0; RefreshCards(); };
+            scrollLeftButton.Click += delegate
+            {
+                themePageStart = Math.Max(0, themePageStart - ThemePageSize);
+                RefreshCards();
+            };
+            scrollRightButton.Click += delegate
+            {
+                themePageStart += ThemePageSize;
+                RefreshCards();
+            };
             heroApplyButton.Click += delegate { if (selectedTheme != null) RunAction("正在应用 " + selectedTheme.Name, "activate", selectedTheme.Id, "-RestartExisting"); };
             heroPreviewButton.Click += delegate { ShowPreview(); };
             heroBackgroundButton.Click += delegate { ChooseLocalBackground(); };
             heroDeleteButton.Click += delegate { DeleteSelectedTheme(); };
+            heroMoveButton.Click += delegate { MoveSelectedTheme(); };
             createThemeButton.Click += delegate { OpenThemeGenerator(); };
+            importThemeButton.Click += delegate { ImportThemeBundle(null); };
+            newSeriesButton.Click += delegate { CreateSeries(); };
+            renameSeriesButton.Click += delegate { RenameSeries(); };
+            deleteSeriesButton.Click += delegate { DeleteSeries(); };
             cancelOperationButton.Click += delegate { CancelOperation(); };
             pauseButton.Click += delegate { RunAction("正在暂停主题", "pause"); };
             resumeButton.Click += delegate { RunAction("正在重新应用主题", "resume", "-RestartExisting"); };
@@ -217,6 +255,7 @@ namespace CodexThemeStudio.Desktop
         {
             ApplyRoundedClip(heroContent, 15);
             LoadThemes();
+            RefreshSeries();
             RefreshState();
             themeStorePath.Text = Path.Combine(stateRoot, "themes");
             enginePath.Text = engineRoot;
@@ -297,6 +336,7 @@ namespace CodexThemeStudio.Desktop
                     if (data == null) continue;
                     ThemeItem item = new ThemeItem();
                     item.Id = Value(data, "id"); item.Name = Value(data, "name"); item.Appearance = Value(data, "appearance");
+                    item.SeriesId = engine.Catalog.GetSeriesId(item.Id);
                     item.Directory = directory; item.Layout = "native";
                     Dictionary<string, object> layout = Object(data, "layout");
                     if (layout != null && !string.IsNullOrEmpty(Value(layout, "mode"))) item.Layout = Value(layout, "mode");
@@ -331,24 +371,29 @@ namespace CodexThemeStudio.Desktop
             return data.TryGetValue(key, out value) && value != null ? Convert.ToString(value) : string.Empty;
         }
 
-        private BitmapSource LoadBitmap(string path)
+        private BitmapSource LoadBitmap(string path, int decodeWidth)
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
             DateTime stamp = File.GetLastWriteTimeUtc(path);
-            string key = path + "|" + stamp.Ticks;
+            string key = path + "|" + stamp.Ticks + "|" + decodeWidth;
             BitmapSource cached;
-            if (imageCache.TryGetValue(key, out cached)) return cached;
+            lock (imageCacheSync) if (imageCache.TryGetValue(key, out cached)) return cached;
             BitmapImage bitmap = new BitmapImage();
-            bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.UriSource = new Uri(path); bitmap.EndInit(); bitmap.Freeze();
-            if (imageCache.Count >= 64) imageCache.Clear();
-            imageCache[key] = bitmap;
+            bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.DecodePixelWidth = decodeWidth; bitmap.UriSource = new Uri(path); bitmap.EndInit(); bitmap.Freeze();
+            lock (imageCacheSync)
+            {
+                if (!imageCache.ContainsKey(key))
+                {
+                    imageCache[key] = bitmap;
+                    imageCacheOrder.Enqueue(key);
+                    while (imageCacheOrder.Count > 48) imageCache.Remove(imageCacheOrder.Dequeue());
+                }
+            }
             return bitmap;
         }
 
         private void RefreshState()
         {
-            bool paused = File.Exists(Path.Combine(stateRoot, "paused"));
-            bool running = false;
             string statePath = Path.Combine(stateRoot, "state.json");
             if (File.Exists(statePath))
             {
@@ -359,55 +404,217 @@ namespace CodexThemeStudio.Desktop
                     int pid;
                     if (state != null && int.TryParse(Value(state, "injectorPid"), out pid))
                     {
-                        try { Process process = Process.GetProcessById(pid); running = !process.HasExited; process.Dispose(); } catch { }
+                        try { Process process = Process.GetProcessById(pid); process.Dispose(); } catch { }
                     }
                 }
                 catch { currentThemeId = string.Empty; }
             }
-            if (!running)
-            {
-                using (TcpClient client = new TcpClient())
-                {
-                    try
-                    {
-                        IAsyncResult connection = client.BeginConnect("127.0.0.1", 9335, null, null);
-                        if (connection.AsyncWaitHandle.WaitOne(180))
-                        {
-                            client.EndConnect(connection);
-                            running = client.Connected;
-                        }
-                        connection.AsyncWaitHandle.Close();
-                    }
-                    catch { running = false; }
-                }
-            }
+            string runtimeStatus = engine.GetRuntimeStatus(false);
             ThemeItem current = themes.FirstOrDefault(delegate(ThemeItem item) { return string.Equals(item.Id, currentThemeId, StringComparison.Ordinal); });
-            runtimeLabel.Text = running ? "运行时正常" : "运行时未连接";
-            runtimeDot.Fill = Brush(running ? "#50C989" : "#D8A757");
             currentThemeValue.Text = current == null ? "官方外观" : current.Name;
-            runtimeModeValue.Text = paused ? "已暂停" : (running ? "主题运行中" : "未连接");
+            UpdateRuntimeStatus(runtimeStatus);
             if (selectedTheme == null) selectedTheme = current ?? themes.FirstOrDefault();
             RefreshCards();
             SetHero(selectedTheme);
         }
 
+        private void SupervisorHealthChanged(object sender, RuntimeHealthChangedEventArgs e)
+        {
+            if (window == null || window.Dispatcher.HasShutdownStarted) return;
+            window.Dispatcher.BeginInvoke(new Action(delegate { UpdateRuntimeStatus(e.Status); }), DispatcherPriority.Background);
+        }
+
+        private void UpdateRuntimeStatus(string status)
+        {
+            string label;
+            string mode;
+            string detail;
+            string color;
+            switch (status)
+            {
+                case "HEALTHY":
+                    label = "运行时正常"; mode = "主题运行中"; color = "#50C989";
+                    detail = "watcher、Codex 与 CDP 身份一致，主题增量同步正常。";
+                    break;
+                case "SELF_HEALING":
+                    label = "正在自愈"; mode = "正在重连渲染器"; color = "#69A7FF";
+                    detail = "CDP 连接仍有效，RuntimeSupervisor 正在安全重启 watcher。";
+                    break;
+                case "NEEDS_RESTART":
+                    label = "需要重启"; mode = "等待用户确认"; color = "#D8A757";
+                    detail = "Codex 正在运行但 CDP 身份不可恢复。Studio 不会静默结束 Codex，请点击“重新应用”并确认。";
+                    break;
+                case "PAUSED":
+                    label = "主题已暂停"; mode = "官方外观"; color = "#8E939B";
+                    detail = "主题数据和回退点均已保留，点击“重新应用”可恢复。";
+                    break;
+                case "OFFLINE":
+                    label = "Codex 未连接"; mode = "等待启动"; color = "#D8A757";
+                    detail = "当前没有可用的 Codex CDP 会话；点击“重新应用”会以普通方式启动 Codex。";
+                    break;
+                default:
+                    label = "运行时故障"; mode = "需要检查"; color = "#E56B73";
+                    detail = "运行监督检测到异常。可先运行验证，或暂停后重新应用。";
+                    break;
+            }
+            runtimeLabel.Text = label;
+            runtimeDot.Fill = Brush(color);
+            runtimeModeValue.Text = mode;
+            runtimeDetailValue.Text = detail;
+        }
+
+        private void RefreshSeries()
+        {
+            if (seriesStrip == null) return;
+            seriesStrip.Children.Clear();
+            IList<ThemeSeries> items = engine.Catalog.GetSeries();
+            if (!items.Any(item => item.Id == selectedSeriesId)) selectedSeriesId = ThemeCatalog.AllSeriesId;
+            foreach (ThemeSeries item in items)
+            {
+                Button button = new Button {
+                    Content = item.Name,
+                    Style = (Style)window.FindResource("FilterButton"),
+                    Margin = new Thickness(0, 0, 7, 0),
+                    Tag = item.Id
+                };
+                SetFilterStyle(button, item.Id == selectedSeriesId);
+                button.Click += delegate(object sender, RoutedEventArgs e)
+                {
+                    selectedSeriesId = Convert.ToString(((Button)sender).Tag);
+                    themePageStart = 0;
+                    RefreshSeries();
+                    RefreshCards();
+                };
+                seriesStrip.Children.Add(button);
+            }
+            bool editable = selectedSeriesId != ThemeCatalog.AllSeriesId && selectedSeriesId != ThemeCatalog.UnclassifiedSeriesId;
+            renameSeriesButton.IsEnabled = editable;
+            deleteSeriesButton.IsEnabled = editable;
+        }
+
+        private void CreateSeries()
+        {
+            string id = ShowTextPrompt("新建系列", "系列 ID（小写字母、数字和连字符）", string.Empty);
+            if (string.IsNullOrWhiteSpace(id)) return;
+            string name = ShowTextPrompt("新建系列", "系列名称", id);
+            if (string.IsNullOrWhiteSpace(name)) return;
+            try
+            {
+                engine.Catalog.CreateSeries(id.Trim(), name.Trim());
+                selectedSeriesId = id.Trim();
+                themePageStart = 0;
+                RefreshSeries();
+                RefreshCards();
+            }
+            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "系列管理", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private void RenameSeries()
+        {
+            ThemeSeries item = engine.Catalog.GetSeries().FirstOrDefault(value => value.Id == selectedSeriesId);
+            if (item == null || item.Id == ThemeCatalog.AllSeriesId || item.Id == ThemeCatalog.UnclassifiedSeriesId) return;
+            string name = ShowTextPrompt("重命名系列", "新的系列名称", item.Name);
+            if (string.IsNullOrWhiteSpace(name)) return;
+            try { engine.Catalog.RenameSeries(item.Id, name); RefreshSeries(); }
+            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "系列管理", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private void DeleteSeries()
+        {
+            ThemeSeries item = engine.Catalog.GetSeries().FirstOrDefault(value => value.Id == selectedSeriesId);
+            if (item == null || item.Id == ThemeCatalog.AllSeriesId || item.Id == ThemeCatalog.UnclassifiedSeriesId) return;
+            if (System.Windows.MessageBox.Show(
+                "删除系列“" + item.Name + "”？系列内主题将移至“未分类”，主题文件不会删除。",
+                "删除系列",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+            engine.Catalog.DeleteSeries(item.Id);
+            foreach (ThemeItem theme in themes) theme.SeriesId = engine.Catalog.GetSeriesId(theme.Id);
+            selectedSeriesId = ThemeCatalog.UnclassifiedSeriesId;
+            themePageStart = 0;
+            RefreshSeries();
+            RefreshCards();
+        }
+
+        private void MoveSelectedTheme()
+        {
+            if (selectedTheme == null) return;
+            ThemeSeries target = ShowSeriesPrompt(engine.Catalog.GetSeries().Where(
+                item => item.Id != ThemeCatalog.AllSeriesId).ToList());
+            if (target == null) return;
+            engine.Catalog.MoveTheme(selectedTheme.Id, target.Id);
+            selectedTheme.SeriesId = engine.Catalog.GetSeriesId(selectedTheme.Id);
+            selectedSeriesId = selectedTheme.SeriesId;
+            themePageStart = 0;
+            RefreshSeries();
+            RefreshCards();
+        }
+
+        private string ShowTextPrompt(string title, string label, string initialValue)
+        {
+            Window dialog = new Window {
+                Title = title, Width = 460, Height = 220, Owner = window,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ResizeMode = ResizeMode.NoResize, Background = Brush("#111318"), Foreground = Brush("#EEE4D7"),
+                FontFamily = new FontFamily("Microsoft YaHei UI")
+            };
+            StackPanel stack = new StackPanel { Margin = new Thickness(24) };
+            stack.Children.Add(new TextBlock { Text = label, Foreground = Brush("#C9B89F"), Margin = new Thickness(0, 0, 0, 10) });
+            TextBox input = new TextBox { Text = initialValue ?? string.Empty, Height = 38, Padding = new Thickness(10, 7, 10, 7), Background = Brush("#1A1C21"), Foreground = Brush("#F5E8D4"), BorderBrush = Brush("#4B4640") };
+            stack.Children.Add(input);
+            StackPanel actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
+            Button cancel = new Button { Content = "取消", Width = 86, Style = (Style)window.FindResource("ActionButton"), Margin = new Thickness(0, 0, 8, 0) };
+            Button confirm = new Button { Content = "确认", Width = 86, Style = (Style)window.FindResource("PrimaryButton") };
+            actions.Children.Add(cancel); actions.Children.Add(confirm); stack.Children.Add(actions); dialog.Content = stack;
+            cancel.Click += delegate { dialog.DialogResult = false; };
+            confirm.Click += delegate { dialog.DialogResult = true; };
+            dialog.Loaded += delegate { input.Focus(); input.SelectAll(); };
+            return dialog.ShowDialog() == true ? input.Text.Trim() : null;
+        }
+
+        private ThemeSeries ShowSeriesPrompt(IList<ThemeSeries> items)
+        {
+            Window dialog = new Window {
+                Title = "移动到系列", Width = 440, Height = 210, Owner = window,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize,
+                Background = Brush("#111318"), Foreground = Brush("#EEE4D7")
+            };
+            StackPanel stack = new StackPanel { Margin = new Thickness(24) };
+            stack.Children.Add(new TextBlock { Text = "选择目标系列", Foreground = Brush("#C9B89F"), Margin = new Thickness(0, 0, 0, 10) });
+            ComboBox combo = new ComboBox { ItemsSource = items, DisplayMemberPath = "Name", SelectedIndex = 0, Height = 38 };
+            stack.Children.Add(combo);
+            Button confirm = new Button { Content = "移动", Width = 96, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0), Style = (Style)window.FindResource("PrimaryButton") };
+            confirm.Click += delegate { dialog.DialogResult = true; };
+            stack.Children.Add(confirm); dialog.Content = stack;
+            return dialog.ShowDialog() == true ? combo.SelectedItem as ThemeSeries : null;
+        }
+
         private void RefreshCards()
         {
             if (themeStrip == null) return;
-            double offset = themeScroll.HorizontalOffset;
             string query = (searchBox.Text ?? string.Empty).Trim();
             List<ThemeItem> visible = themes.Where(delegate(ThemeItem item)
             {
                 bool filterMatch = filter == "all" || string.Equals(item.Appearance, filter, StringComparison.OrdinalIgnoreCase);
                 bool queryMatch = query.Length == 0 || (item.Name + " " + item.Id).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
-                return filterMatch && queryMatch;
-            }).ToList();
+                bool seriesMatch = selectedSeriesId == ThemeCatalog.AllSeriesId ||
+                    string.Equals(item.SeriesId, selectedSeriesId, StringComparison.Ordinal);
+                return filterMatch && queryMatch && seriesMatch;
+            }).OrderBy(item => engine.Catalog.GetThemeOrder(item.Id)).ThenBy(item => item.Name).ToList();
+            int lastPageStart = visible.Count == 0 ? 0 : ((visible.Count - 1) / ThemePageSize) * ThemePageSize;
+            themePageStart = Math.Max(0, Math.Min(themePageStart, lastPageStart));
+            List<ThemeItem> page = visible.Skip(themePageStart).Take(ThemePageSize).ToList();
             if (selectedTheme == null || !visible.Any(delegate(ThemeItem item) { return item.Id == selectedTheme.Id; })) selectedTheme = visible.FirstOrDefault();
             themeStrip.Children.Clear();
-            foreach (ThemeItem item in visible) themeStrip.Children.Add(CreateCard(item));
-            themeCountLabel.Text = "· " + visible.Count + " / " + themes.Count;
+            foreach (ThemeItem item in page) themeStrip.Children.Add(CreateCard(item));
+            int pageEnd = Math.Min(themePageStart + page.Count, visible.Count);
+            themeCountLabel.Text = visible.Count == 0
+                ? "· 0 / " + themes.Count
+                : "· " + (themePageStart + 1) + "–" + pageEnd + " / " + visible.Count + "（总计 " + themes.Count + "）";
+            scrollLeftButton.IsEnabled = themePageStart > 0;
+            scrollRightButton.IsEnabled = themePageStart + ThemePageSize < visible.Count;
             SetFilterStyle(allFilter, filter == "all"); SetFilterStyle(darkFilter, filter == "dark"); SetFilterStyle(lightFilter, filter == "light");
-            themeScroll.ScrollToHorizontalOffset(offset);
+            themeScroll.ScrollToHorizontalOffset(0);
             SetHero(selectedTheme);
         }
 
@@ -425,7 +632,13 @@ namespace CodexThemeStudio.Desktop
             card.BorderBrush = Brush(selectedTheme != null && selectedTheme.Id == item.Id ? "#D6AE78" : "#34312E");
             Grid layout = new Grid(); layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(118) }); layout.RowDefinitions.Add(new RowDefinition());
             layout.SizeChanged += delegate { ApplyRoundedClip(layout, 10); };
-            Grid visual = new Grid(); Image image = new Image(); image.Source = LoadBitmap(item.BackgroundPath); image.Stretch = Stretch.UniformToFill; visual.Children.Add(image);
+            Grid visual = new Grid(); Image image = new Image(); image.Stretch = Stretch.UniformToFill; visual.Children.Add(image);
+            card.Loaded += async delegate
+            {
+                string source = await Task.Run(delegate { return assetCache.GetThumbnail(item.BackgroundPath); });
+                BitmapSource thumbnail = await Task.Run(delegate { return LoadBitmap(source, 480); });
+                if (card.IsLoaded) image.Source = thumbnail;
+            };
             if (item.Id == currentThemeId)
             {
                 Border badge = new Border { Background = Brush("#E7C18D"), CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 3, 8, 3), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8) };
@@ -441,7 +654,7 @@ namespace CodexThemeStudio.Desktop
         private void SetHero(ThemeItem item)
         {
             if (item == null) return;
-            selectedTheme = item; heroImage.Source = LoadBitmap(item.BackgroundPath); heroName.Text = item.Name;
+            selectedTheme = item; heroImage.Source = LoadBitmap(item.BackgroundPath, 1400); heroName.Text = item.Name;
             heroMeta.Text = (item.Appearance == "light" ? "浅色" : "深色") + " · " + (item.Layout == "native" ? "原生布局" : item.Layout + " 布局") + " · 已验证";
             heroDescription.Text = item.Appearance == "light" ? "轻盈通透的视觉氛围，为阅读、整理与白天创作提供清晰舒适的工作空间。" : "深邃克制的暗色氛围，为长时间创作提供专注、舒适且沉浸的视觉体验。";
             bool current = item.Id == currentThemeId;
@@ -467,9 +680,9 @@ namespace CodexThemeStudio.Desktop
         private void SetBusy(bool busy, string label)
         {
             activityDock.Visibility = busy ? Visibility.Visible : Visibility.Collapsed; operationTitle.Text = label;
-            foreach (Button button in new[] { createThemeButton, heroApplyButton, heroBackgroundButton, heroDeleteButton, pauseButton, resumeButton, runtimeVerifyButton, rollbackButton, restoreButton }) button.IsEnabled = !busy;
+            foreach (Button button in new[] { importThemeButton, createThemeButton, heroApplyButton, heroBackgroundButton, heroMoveButton, heroDeleteButton, newSeriesButton, renameSeriesButton, deleteSeriesButton, pauseButton, resumeButton, runtimeVerifyButton, rollbackButton, restoreButton }) button.IsEnabled = !busy;
             if (busy) { busyBar.Value = 4; progressText.Text = " · 4%"; cancelOperationButton.IsEnabled = true; }
-            else SetHero(selectedTheme);
+            else { SetHero(selectedTheme); RefreshSeries(); }
         }
 
         private void UpdateProgress(object sender, EventArgs e)
@@ -484,6 +697,7 @@ namespace CodexThemeStudio.Desktop
             if (arguments != null && arguments.Length > 0 &&
                 (string.Equals(arguments[0], "activate", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(arguments[0], "resume", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(arguments[0], "rollback", StringComparison.OrdinalIgnoreCase) ||
                  (string.Equals(arguments[0], "set-background", StringComparison.OrdinalIgnoreCase) && arguments.Length > 1 && string.Equals(arguments[1], currentThemeId, StringComparison.Ordinal))) &&
                 engine.RequiresCodexRestart())
             {
@@ -493,6 +707,8 @@ namespace CodexThemeStudio.Desktop
                     MessageBoxButton.OKCancel,
                     MessageBoxImage.Warning);
                 if (restart != MessageBoxResult.OK) return;
+                if (!arguments.Any(value => string.Equals(value, "-RestartExisting", StringComparison.OrdinalIgnoreCase)))
+                    arguments = arguments.Concat(new[] { "-RestartExisting" }).ToArray();
             }
             operationCancellation = new CancellationTokenSource(); operationStartedAt = DateTime.UtcNow; SetBusy(true, label); progressTimer.Start();
             try
@@ -537,9 +753,71 @@ namespace CodexThemeStudio.Desktop
         {
             if (selectedTheme == null) return;
             Window preview = new Window { Title = selectedTheme.Name + " · 预览", Width = 1040, Height = 660, Owner = window, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush("#0A0C10"), Icon = window.Icon };
-            Grid grid = new Grid(); Image image = new Image { Source = LoadBitmap(selectedTheme.BackgroundPath), Stretch = Stretch.UniformToFill }; grid.Children.Add(image);
+            Grid grid = new Grid(); Image image = new Image { Source = LoadBitmap(selectedTheme.BackgroundPath, 1400), Stretch = Stretch.UniformToFill }; grid.Children.Add(image);
             Border panel = new Border { Width = 420, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(38), Padding = new Thickness(28), CornerRadius = new CornerRadius(16), Background = Brush("#E6121418") };
             StackPanel stack = new StackPanel(); stack.Children.Add(new TextBlock { Text = selectedTheme.Name, FontSize = 30, Foreground = Brush("#F4DFC1"), Margin = new Thickness(0, 0, 0, 14) }); stack.Children.Add(new TextBlock { Text = selectedTheme.Id, FontSize = 12, Foreground = Brush("#B8B0A6") }); panel.Child = stack; grid.Children.Add(panel); preview.Content = grid; preview.ShowDialog();
+        }
+
+        public async void ImportThemeBundle(string packagePath)
+        {
+            if (operationCancellation != null) return;
+            if (string.IsNullOrWhiteSpace(packagePath))
+            {
+                Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog {
+                    Title = "导入 Codex 主题 Bundle",
+                    Filter = "Codex Theme Bundle (*.codextheme)|*.codextheme",
+                    CheckFileExists = true,
+                    Multiselect = false
+                };
+                if (dialog.ShowDialog(window) != true) return;
+                packagePath = dialog.FileName;
+            }
+            operationCancellation = new CancellationTokenSource();
+            try
+            {
+                EngineCommandResult previewResult = await engine.ExecuteAsync(
+                    new[] { "preview", packagePath },
+                    operationCancellation.Token,
+                    TimeSpan.FromSeconds(45));
+                if (previewResult.ExitCode != 0) throw new InvalidDataException(previewResult.StandardError);
+                Dictionary<string, object> preview = serializer.DeserializeObject(previewResult.StandardOutput) as Dictionary<string, object>;
+                if (preview == null) throw new InvalidDataException("Bundle 预览结果无效。");
+                object[] ids = preview["themeIds"] as object[];
+                object[] conflicts = preview["conflicts"] as object[];
+                Dictionary<string, object> series = preview["series"] as Dictionary<string, object>;
+                string summary = "系列：" + Value(series, "name") + Environment.NewLine +
+                    "主题数：" + (ids == null ? 0 : ids.Length) + Environment.NewLine +
+                    "校验：Bundle v1、SHA-256 与 Theme Pack v2 已通过";
+                if (conflicts != null && conflicts.Length > 0)
+                {
+                    summary += Environment.NewLine + "冲突：" + string.Join(", ", conflicts.Select(Convert.ToString));
+                    System.Windows.MessageBox.Show(summary + Environment.NewLine + "整包未导入，也不会覆盖现有主题。", "导入预览", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (System.Windows.MessageBox.Show(
+                    summary + Environment.NewLine + Environment.NewLine + "确认导入？导入后不会自动激活。",
+                    "导入主题",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information) != MessageBoxResult.Yes) return;
+
+                SetBusy(true, "正在安全导入主题 Bundle");
+                EngineCommandResult imported = await engine.ExecuteAsync(
+                    new[] { "import", packagePath },
+                    operationCancellation.Token,
+                    TimeSpan.FromSeconds(120));
+                if (imported.ExitCode != 0) throw new InvalidDataException(imported.StandardError);
+                LoadThemes();
+                RefreshSeries();
+                RefreshState();
+                System.Windows.MessageBox.Show("主题 Bundle 已完整导入，尚未激活。", "导入完成", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "导入主题", MessageBoxButton.OK, MessageBoxImage.Error); }
+            finally
+            {
+                if (operationCancellation != null) { operationCancellation.Dispose(); operationCancellation = null; }
+                SetBusy(false, string.Empty);
+            }
         }
 
         private void ChooseLocalBackground()
@@ -592,6 +870,12 @@ namespace CodexThemeStudio.Desktop
             window.Activate(); window.Topmost = true; window.Topmost = false; window.Focus();
         }
 
+        public void OpenPackage(string packagePath)
+        {
+            ShowAndActivate();
+            ImportThemeBundle(packagePath);
+        }
+
         public void RequestExit()
         {
             exitRequested = true; CancelOperation(); window.Close(); System.Windows.Application.Current.Shutdown();
@@ -624,6 +908,7 @@ namespace CodexThemeStudio.Desktop
         {
             progressTimer.Stop();
             if (operationCancellation != null) operationCancellation.Dispose();
+            supervisor.Dispose();
             engine.Dispose();
         }
     }

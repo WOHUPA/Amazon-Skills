@@ -767,7 +767,7 @@
     };
   };
 
-  const ensure = () => {
+  const ensure = (strongAudit = false) => {
     if (window.__CODEX_DREAM_SKIN_DISABLED__ || applying) return;
     applying = true;
     try {
@@ -778,11 +778,19 @@
         clearSkinDom();
         return;
       }
-      const probe = adapterProbe();
+      const state = window[STATE_KEY];
+      const runAudit = strongAudit || !state?.auditCompleted || runtime.evidenceMode === true;
+      const probe = runAudit ? adapterProbe() : {
+        supported: state.adapterStatus !== BLOCKED,
+        reason: state.adapterReason,
+        signatures: state.structureSignatures || {},
+      };
       const layoutReceipt = hostAdapter?.layoutMatrix?.[config.layout.mode];
-      const layoutAllowed = probe.supported && layoutReceipt?.status === COMPLETE;
+      const layoutAllowed = runAudit
+        ? probe.supported && layoutReceipt?.status === COMPLETE
+        : state.layoutMode === config.layout.mode;
       const effectiveMode = layoutAllowed ? config.layout.mode : "native";
-      const effectiveDensity = effectiveMode === "native" ? "comfortable" : config.layout.density;
+      const effectiveDensity = runAudit ? (effectiveMode === "native" ? "comfortable" : config.layout.density) : (state.density || "comfortable");
       const appearance = detectAppearance();
       root.classList.add("codex-dream-skin");
       root.classList.toggle("dream-theme-light", appearance === "light");
@@ -828,6 +836,16 @@
       }
 
       const iconResult = applyIcons();
+      if (!runAudit) {
+        if (state?.installToken === installToken) {
+          Object.assign(state, {
+            iconsApplied: iconResult.slots,
+            iconAudit: iconResult.audit,
+            incrementalSyncAt: Date.now(),
+          });
+        }
+        return;
+      }
       const sceneAudit = buildSceneAudit(iconResult);
       const layoutEffect = buildLayoutEffect(effectiveMode, effectiveDensity, sceneAudit);
       const geometryAudit = buildGeometryAudit(sceneAudit, layoutEffect);
@@ -859,7 +877,6 @@
         adapterReason = "VISUAL_CONTRACT_FAILED";
       }
 
-      const state = window[STATE_KEY];
       if (state?.installToken === installToken) {
         Object.assign(state, {
           adapterStatus,
@@ -879,6 +896,7 @@
           stylesEvidence,
           evidenceMode: runtime.evidenceMode === true,
           requestedScene: runtime.requestedScene || null,
+          auditCompleted: true,
         });
       }
     } finally {
@@ -905,7 +923,7 @@
     if (!state || state.installToken !== installToken || state.scheduler) return;
     state.scheduler = setTimeout(() => {
       state.scheduler = null;
-      ensure();
+      ensure(false);
     }, 180);
   };
 
@@ -920,12 +938,12 @@
     ],
   });
   const interactionEvents = [
-    "pointerover", "pointerdown", "pointerup", "focusin", "focusout", "input", "change",
+    "focusin", "input", "change",
   ];
   for (const eventName of interactionEvents) {
     document.addEventListener(eventName, scheduleEnsure, true);
   }
-  const timer = setInterval(ensure, 5000);
+  const timer = setInterval(scheduleEnsure, 60000);
   window[STATE_KEY] = {
     ensure,
     cleanup,
@@ -950,8 +968,9 @@
     contrastAudit: { status: PARTIAL, ratios: {}, failures: [] },
     stylesEvidence: { status: PARTIAL, semanticStates: {}, components: {} },
     evidenceMode: runtime.evidenceMode === true,
+    auditCompleted: false,
   };
-  ensure();
+  ensure(true);
   return {
     installed: true,
     version: VERSION,

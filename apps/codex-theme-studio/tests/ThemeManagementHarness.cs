@@ -16,15 +16,17 @@ namespace CodexThemeStudio.Desktop
 
     internal static class ThemeManagementHarness
     {
-        private static void Main()
+        private static void Main(string[] args)
         {
+            if (args.Length != 1) throw new ArgumentException("Repository root is required.");
+            string presetRoot = Path.Combine(args[0], "presets", "immersive-dark");
             string root = Path.Combine(Path.GetTempPath(), "codex-theme-management-" + Guid.NewGuid().ToString("N"));
             string stateRoot = Path.Combine(root, "state");
             string engineRoot = Path.Combine(root, "engine");
             try
             {
-                WriteTheme(Path.Combine(engineRoot, "presets", "immersive-dark"), "immersive-dark");
-                WriteTheme(Path.Combine(engineRoot, "presets", "custom-theme"), "custom-theme");
+                WriteTheme(presetRoot, Path.Combine(engineRoot, "presets", "immersive-dark"), "immersive-dark");
+                WriteTheme(presetRoot, Path.Combine(engineRoot, "presets", "custom-theme"), "custom-theme");
                 string validImage = Path.Combine(root, "valid.png");
                 string invalidImage = Path.Combine(root, "invalid.png");
                 WriteImage(validImage, 1600, 900);
@@ -80,18 +82,36 @@ namespace CodexThemeStudio.Desktop
 
                 Console.WriteLine("PASS: Local background transaction and recoverable theme deletion verified.");
             }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.GetType().FullName);
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
+                Environment.ExitCode = 1;
+            }
             finally
             {
                 if (Directory.Exists(root)) Directory.Delete(root, true);
             }
         }
 
-        private static void WriteTheme(string directory, string id)
+        private static void WriteTheme(string source, string directory, string id)
         {
-            Directory.CreateDirectory(Path.Combine(directory, "assets"));
-            string json = "{\"schemaVersion\":2,\"id\":\"" + id + "\",\"name\":\"" + id + "\",\"assets\":{\"homeBackground\":\"assets/home.png\",\"taskBackground\":\"assets/task.png\",\"icons\":{}}}";
-            File.WriteAllText(Path.Combine(directory, "theme.json"), json, new UTF8Encoding(false));
-            File.WriteAllText(Path.Combine(directory, "preview.html"), "assets/home.png assets/task.png", new UTF8Encoding(false));
+            CopyDirectory(source, directory);
+            string themePath = Path.Combine(directory, "theme.json");
+            string json = File.ReadAllText(themePath, Encoding.UTF8)
+                .Replace("\"id\": \"immersive-dark\"", "\"id\": \"" + id + "\"")
+                .Replace("\"name\": \"沉浸深色\"", "\"name\": \"" + id + "\"");
+            File.WriteAllText(themePath, json, new UTF8Encoding(false));
+        }
+
+        private static void CopyDirectory(string source, string destination)
+        {
+            Directory.CreateDirectory(destination);
+            foreach (string file in Directory.GetFiles(source))
+                File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), true);
+            foreach (string child in Directory.GetDirectories(source))
+                CopyDirectory(child, Path.Combine(destination, Path.GetFileName(child)));
         }
 
         private static void WriteImage(string path, int width, int height)

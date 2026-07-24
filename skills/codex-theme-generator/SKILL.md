@@ -1,15 +1,15 @@
 ---
 name: codex-theme-generator
-description: 当用户明确要求创建、生成或重建 Codex Desktop 主题时使用，是新主题唯一入口。只生成并静态验证纯数据 Theme Pack v2 与 Codex 原生主题分享载荷；不适用于安装、更新、导入或激活 Codex Theme Studio，后续操作交给 codex-theme-selector。所有输出写入均须先确认目录，目标存在时拒绝覆盖并回滚临时事务；不执行不可逆操作。禁止修改 WindowsApps、app.asar、官方签名和认证数据。
+description: 当用户明确要求创建、生成或重建 Codex Desktop 主题，或要求生成可一键导入 Theme Studio 的 .codextheme 文件时使用，是新主题唯一入口。生成并静态验证纯数据 Theme Pack v2、Codex 原生主题分享载荷和可选 Bundle v1；不适用于安装、更新、导入或激活 Studio，后续操作交给 codex-theme-selector。写入前必须确认主题目录与 Bundle 文件两个目标，目标存在时拒绝覆盖并回滚。
 metadata:
-  version: "2.3.0"
+  version: "2.7.0"
 ---
 
 # Codex Theme Generator
 
 ## 适用边界
 
-用于新建深色、浅色或双模式主题，生成背景、八个语义图标、配色、材质、白名单布局、静态预览、Theme Pack v2 和 Codex 原生分享载荷，并执行确定性静态验证。
+用于新建深色、浅色或双模式主题，生成背景、八个语义图标、配色、材质、白名单布局、静态预览、Theme Pack v2、Codex 原生分享载荷，以及可被 Studio 一键导入的 `.codextheme` Bundle v1，并执行确定性静态验证。
 
 本 Skill 不携带、不安装、不更新 Codex Theme Studio，也不导入、激活、回退、暂停、恢复或实机验证主题。不适用于修改 Codex 官方外观。已有主题的管理操作使用 `codex-theme-selector`；Studio 的安装和更新由独立客户端负责；旧 Dream Skin v1 迁移使用显式 `codex-skin-maker`。
 
@@ -25,13 +25,14 @@ metadata:
 - `dark`、`light`、`auto` 或双模式；双模式生成 `<id>-dark` 与 `<id>-light` 两个独立 ID。
 - 可选首页/任务页 16:9 PNG/JPEG、八个语义图标目录、强调色、焦点、安全区和布局。
 - 默认布局固定为 `native + comfortable + composerOffset=0`。
-- 输出目录；目标已存在时拒绝覆盖。
+- 主题目录、Bundle 文件路径、系列 ID 与系列名称；两个输出目标任一已存在时拒绝覆盖。
 
 输出：
 
 - 一个或两个完整 Theme Pack v2 目录。
+- 一个包含单主题或深浅双主题的 `.codextheme` Bundle v1。
 - 静态验证报告与原生分享载荷。
-- `packStatus/studioDetected/handoffStatus/importStatus/activationStatus/notRun` 状态字段。
+- `packStatus/bundlePath/bundleStatus/studioDetected/handoffStatus/importStatus/activationStatus/notRun` 状态字段。
 - 可供 `codex-theme-selector` 使用的精确主题目录与主题 ID。
 
 身份保持或品牌复刻需要真实参考图；只有抽象方向时可使用 `immersive-dark`、`clear-light`、`obsidian-gold` 三个内置模板之一。
@@ -53,16 +54,18 @@ metadata:
 ```powershell
 python scripts\build_theme.py --output-dir "<目录>" --id "<id>" --name "<名称>" `
   --appearance dark --template immersive-dark --accent "#7C8CFF" `
-  --home-background "<可选图片>" --task-background "<可选图片>"
+  --home-background "<可选图片>" --task-background "<可选图片>" `
+  --bundle-output "<Bundle.codextheme>" --series-id "<series-id>" --series-name "<系列名称>"
 ```
 
 双模式：
 
 ```powershell
-python scripts\build_theme.py --output-dir "<目录>" --id "<id>" --name "<名称>" --pair
+python scripts\build_theme.py --output-dir "<目录>" --id "<id>" --name "<名称>" --pair `
+  --bundle-output "<Bundle.codextheme>" --series-id "<series-id>" --series-name "<系列名称>"
 ```
 
-脚本在同级临时目录完成全部写入和验证后原子提交；失败不得留下半成品。
+脚本在临时目录完成主题与 Bundle 全量写入和验证后统一提交；主题目录或 Bundle 提交任一步失败都回滚，不得留下半成品。Bundle 内固定包含 `bundle.json` 与 `themes/<id>/`，Theme Pack v2 内部契约不变。
 
 ### 4. 确定性静态验证
 
@@ -80,7 +83,7 @@ python -m unittest discover -s tests -v
 默认只检测：
 
 ```powershell
-$studio = "$env:LOCALAPPDATA\CodexThemeStudio\engine\scripts\theme-studio.ps1"
+$studio = "$env:LOCALAPPDATA\Programs\Codex Theme Studio\CodexThemeStudio.exe"
 Test-Path -LiteralPath $studio -PathType Leaf
 ```
 
@@ -88,7 +91,7 @@ Test-Path -LiteralPath $studio -PathType Leaf
 
 ### 6. 生成导入交接
 
-生成完成后报告精确主题目录和 ID，并给出使用 `codex-theme-selector` 导入的下一步。只有用户明确要求导入时，才交给选择器执行；导入完成后仍不得自动激活。
+生成完成后报告精确主题目录、Bundle 文件、系列和主题 ID，并给出使用 `codex-theme-selector` 一键导入 Bundle 的下一步。只有用户明确要求导入时，才交给选择器执行；导入完成后仍不得自动激活。
 
 ### 7. 交付验收
 
@@ -97,6 +100,7 @@ Test-Path -LiteralPath $studio -PathType Leaf
 状态边界：
 
 - `packStatus=COMPLETE|BLOCKED`：仅表示主题包静态验证。
+- `bundleStatus=COMPLETE|NOT_REQUESTED|BLOCKED`：只表示 Bundle 文件已生成并校验，不表示已导入。
 - `studioDetected=true|false`：只读检测结果，不表示安装成功。
 - `handoffStatus=READY|BLOCKED`：是否具备导入所需目录与精确 ID。
 - `importStatus=NOT_RUN`：Generator 永不冒充已导入。
@@ -128,11 +132,15 @@ Test-Path -LiteralPath $studio -PathType Leaf
 ## 引用与工具
 
 - Schema 与边界：`references/theme-contract.md`
+- Bundle v1：`references/bundle-contract.md`
 - 正反例与验收：`references/golden-set.md`
 - 构建：`scripts/build_theme.py`
 - 严格静态验证：`scripts/validate_theme.py`
 - Codex 原生主题编译：`scripts/compile_native_theme.py`
 - 回归：`python scripts/run_golden_fixtures.py --format json`
+- Bundle 构建：`scripts/bundle_theme.py`
+
+任何新发现的失败模式都先写入 `SKILL.patch.md` 与 Golden Set，再修复脚本并用同一案例回归。所有计数、哈希、大小、对比度和状态字段必须由确定性脚本产生，禁止模型手算。
 
 ---
-_v2.3.0 · generator-only Theme Pack pipeline + independent Studio handoff_
+_v2.7.0 · Theme Pack v2 + atomic Bundle v1 delivery_

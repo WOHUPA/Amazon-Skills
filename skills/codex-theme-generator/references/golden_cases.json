@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "cases": [
     {"id": 1, "mode": "contract", "name": "完整深色主题"},
     {"id": 2, "mode": "contract", "name": "双模式主题"},
@@ -10,6 +10,7 @@
     {"id": 7, "mode": "contract", "name": "官方模式反例"},
     {"id": 8, "mode": "contract", "name": "安全失败关闭"},
     {"id": 9, "mode": "contract", "name": "静态与运行状态分离"},
-    {"id": 10, "mode": "contract", "name": "原生主题编译"}
+    {"id": 10, "mode": "contract", "name": "原生主题编译"},
+    {"id": 11, "mode": "contract", "name": "Bundle 一键交付"}
   ]
 }

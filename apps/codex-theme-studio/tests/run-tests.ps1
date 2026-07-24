@@ -1,12 +1,13 @@
 [CmdletBinding()]
-param([string]$Root)
+param(
+  [string]$Root,
+  [switch]$MeasureIdleCpu
+)
 
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($Root)) { $Root = Split-Path -Parent $PSScriptRoot }
 $Root = [System.IO.Path]::GetFullPath($Root)
 $Scripts = Join-Path $Root 'scripts'
-. (Join-Path $Scripts 'common-windows.ps1')
-. (Join-Path $Scripts 'theme-windows.ps1')
 
 foreach ($file in Get-ChildItem -LiteralPath $Scripts -Filter '*.ps1' -File) {
   $tokens = $null
@@ -42,9 +43,31 @@ $guiSource = Get-Content -Raw -LiteralPath $nativeLayout
 $nativeClientSource = Get-Content -Raw -LiteralPath $nativeClient
 $updateSource = Get-Content -Raw -LiteralPath $updateSourcePath
 $nativeEngineSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'desktop\ThemeEngine.cs')
+$supervisorSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'desktop\RuntimeSupervisor.cs')
+$injectorPath = Join-Path $Scripts 'injector.mjs'
+$rendererPath = Join-Path $Root 'assets\renderer-inject.js'
 if ($guiSource -notmatch 'CreateThemeButton' -or $nativeClientSource -notmatch 'OpenThemeGenerator') {
   throw 'Theme Studio create-theme handoff is missing.'
 }
+if ($guiSource -notmatch 'SeriesStrip' -or $guiSource -notmatch 'ImportThemeButton' -or
+    $guiSource -notmatch 'RuntimeSessionPanel' -or $guiSource -notmatch 'RuntimeActionsPanel') {
+  throw 'Theme series, one-click import, or equal-height runtime panels are missing.'
+}
+Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName System.Xaml
+$layoutStream = [System.IO.File]::OpenRead($nativeLayout)
+try { $layoutWindow = [System.Windows.Markup.XamlReader]::Load($layoutStream) } finally { $layoutStream.Dispose() }
+$layoutWindow.FindName('ThemesPage').Visibility = 'Collapsed'
+$layoutWindow.FindName('RuntimePage').Visibility = 'Visible'
+$layoutWindow.Opacity = 0
+$layoutWindow.ShowInTaskbar = $false
+$layoutWindow.Show()
+$layoutWindow.UpdateLayout()
+$runtimeHeightDelta = [math]::Abs(
+  $layoutWindow.FindName('RuntimeSessionPanel').ActualHeight -
+  $layoutWindow.FindName('RuntimeActionsPanel').ActualHeight)
+$layoutWindow.Close()
+if ($runtimeHeightDelta -gt 1) { throw "Runtime panels differ by $runtimeHeightDelta px." }
 if ($guiSource -notmatch 'HeroBackgroundButton' -or $guiSource -notmatch 'HeroDeleteButton' -or
     $nativeClientSource -notmatch 'ChooseLocalBackground' -or $nativeClientSource -notmatch 'DeleteSelectedTheme' -or
     $nativeEngineSource -notmatch 'SetBackground' -or $nativeEngineSource -notmatch 'DeleteTheme' -or
@@ -77,13 +100,17 @@ if ($nativeClientSource -notmatch 'imageCache' -or
     $nativeClientSource -notmatch 'StudioTray') {
   throw 'Theme Studio operation lifetime, image cache, AppUserModelID, or window icon binding is missing.'
 }
+if ($supervisorSource -notmatch 'SELF_HEALING' -or
+    $nativeEngineSource -notmatch 'codexProcesses\.Count > 0 && !allowRestart' -or
+    $nativeEngineSource -notmatch 'NEEDS_RESTART') {
+  throw 'RuntimeSupervisor safe-healing or explicit restart consent boundary is missing.'
+}
 $desktopSources = @(
   (Join-Path $Root 'desktop\Launcher.cs'),
   (Join-Path $Root 'desktop\Updater.cs'),
   (Join-Path $Root 'installer\CodexThemeStudio.iss'),
   (Join-Path $Root 'installer\CodexThemeStudio.wxs'),
   (Join-Path $Scripts 'build-windows-installer.ps1'),
-  (Join-Path $Scripts 'desktop-bootstrap.ps1'),
   (Join-Path $Root 'assets\studio-version.txt')
 )
 foreach ($desktopSource in $desktopSources) {
@@ -119,6 +146,16 @@ if ($installerSource -notmatch 'CodexThemeStudio.Updater.exe' -or $installerSour
     $updaterSource -notmatch 'msiexec.exe' -or $updaterSource -notmatch 'last-result.json') {
   throw 'Windows installer does not install the launcher or register uninstall cleanup.'
 }
+if ($installerSource -notmatch '\\.codextheme' -or $installerSource -notmatch '--background' -or
+    $wixInstallerSource -notmatch '\\.codextheme' -or $launcherSource -notmatch 'SingleInstanceChannel') {
+  throw 'Bundle file association, startup supervisor, or single-instance command channel is missing.'
+}
+if ($nativeClientSource -notmatch 'ThemePageSize = 18' -or
+    $nativeClientSource -notmatch 'visible\.Skip\(themePageStart\)\.Take\(ThemePageSize\)' -or
+    $launcherSource -notmatch '"status", "list", "preview", "import", "activate", "rollback"' -or
+    $launcherSource -match 'normalized == "delete"|GetArgumentValue\(args, "--image"\)') {
+  throw 'Theme list virtualization or the public native CLI boundary regressed.'
+}
 $releaseWorkflow = Get-Content -Raw -LiteralPath (Join-Path $Root '.github\workflows\release.yml')
 $manifestSource = Get-Content -Raw -LiteralPath (Join-Path $Scripts 'new-update-manifest.ps1')
 $updatePublicKey = (Get-Content -Raw -LiteralPath (Join-Path $Root 'assets\update-public-key.txt')).Trim()
@@ -137,39 +174,34 @@ if ($updatePublicKey -notmatch '^RW[A-Za-z0-9+/=]{50,}$' -or
   throw 'Certificate-free signed updater contract is incomplete.'
 }
 
-$node = Get-DreamSkinNodeRuntime
-& $node.Path '--check' (Join-Path $Scripts 'injector.mjs')
+$nodeCommand = Get-Command node -ErrorAction Stop
+$nodePath = if ($nodeCommand.Path) { $nodeCommand.Path } else { $nodeCommand.Name }
+& $nodePath '--check' (Join-Path $Scripts 'injector.mjs')
 if ($LASTEXITCODE -ne 0) { throw 'injector.mjs syntax check failed.' }
-& $node.Path '--check' (Join-Path $Root 'assets\renderer-inject.js')
+& $nodePath '--check' (Join-Path $Root 'assets\renderer-inject.js')
 if ($LASTEXITCODE -ne 0) { throw 'renderer-inject.js syntax check failed.' }
-& $node.Path (Join-Path $Scripts 'injector.mjs') '--self-test'
+& $nodePath (Join-Path $Scripts 'injector.mjs') '--self-test'
 if ($LASTEXITCODE -ne 0) { throw 'injector self-test failed.' }
 $injectorSource = Get-Content -Raw -LiteralPath (Join-Path $Scripts 'injector.mjs')
+$rendererSource = Get-Content -Raw -LiteralPath $rendererPath
 if ($injectorSource -notmatch '--verify-removed' -or
     $injectorSource -notmatch 'expectsRemoved') {
   throw 'Official appearance verification mode is missing.'
 }
-$cliSource = Get-Content -Raw -LiteralPath (Join-Path $Scripts 'theme-studio.ps1')
-if ($cliSource -notmatch 'ExpectRemoved:\$paused') {
-  throw 'Theme Studio verify does not route paused state to official appearance verification.'
+if ($injectorSource -notmatch 'Target\.targetCreated' -or
+    $injectorSource -notmatch 'watchFiles' -or
+    $injectorSource -match 'STRONG_THEME_AUDIT_MS' -or
+    $rendererSource -match 'pointerover|pointerdown|pointerup' -or
+    $rendererSource -match 'setInterval\(ensure,\s*5000\)') {
+  throw 'Event-driven watcher or incremental renderer performance contract regressed.'
 }
-if ($cliSource -match "CreateShortcut\(\(Join-Path \$desktop 'Codex Theme Studio - Restore\.lnk'\)\)") {
-  throw 'Theme Studio still creates the redundant desktop restore shortcut.'
-}
-foreach ($obsoleteName in @('Codex Dream Skin.lnk','Codex Dream Skin - Tray.lnk','Codex Dream Skin - Restore.lnk')) {
-  if ($cliSource -notmatch [regex]::Escape($obsoleteName)) {
-    throw "Theme Studio installer does not clean obsolete shortcut: $obsoleteName"
+foreach ($obsoleteClient in @('theme-studio.ps1','theme-studio-gui.ps1','tray-dream-skin.ps1')) {
+  if (Test-Path -LiteralPath (Join-Path $Scripts $obsoleteClient) -PathType Leaf) {
+    throw "Obsolete PowerShell client remains in source: $obsoleteClient"
   }
 }
-if ($cliSource -notmatch 'shortcut\.IconLocation' -or
-    $cliSource -notmatch 'SHChangeNotify') {
-  throw 'Theme Studio installer does not assign the new shortcut icon and refresh the Windows Shell.'
-}
-if ($cliSource -notmatch 'CodexThemeStudio\.exe' -or $cliSource -match 'shortcut\.TargetPath = \$powershell') {
-  throw 'Theme Studio shortcuts must open the native executable, never a PowerShell-hosted visual manager.'
-}
 foreach ($test in @('renderer-inject.test.mjs','visual-contract.test.mjs','host-adapter-fixture.test.mjs','injector-bootstrap.test.mjs','injector-one-shot.test.mjs','image-metadata.test.mjs')) {
-  & $node.Path (Join-Path $PSScriptRoot $test)
+  & $nodePath (Join-Path $PSScriptRoot $test)
   if ($LASTEXITCODE -ne 0) { throw "Node test failed: $test" }
 }
 
@@ -180,15 +212,82 @@ try {
   $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
   & $csc '/nologo' '/target:exe' "/out:$harnessExe" `
     '/reference:System.dll' '/reference:System.Core.dll' '/reference:System.Drawing.dll' '/reference:System.Web.Extensions.dll' `
-    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $PSScriptRoot 'ThemeManagementHarness.cs')
+    '/reference:System.IO.Compression.dll' '/reference:System.IO.Compression.FileSystem.dll' `
+    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $Root 'desktop\ThemeCatalog.cs') `
+    (Join-Path $Root 'desktop\BundleManager.cs') (Join-Path $PSScriptRoot 'ThemeManagementHarness.cs')
   if ($LASTEXITCODE -ne 0) { throw 'Theme management harness compilation failed.' }
-  & $harnessExe
+  & $harnessExe $Root
   if ($LASTEXITCODE -ne 0) { throw 'Theme management harness failed.' }
 } finally {
   $resolvedHarness = [System.IO.Path]::GetFullPath($harnessRoot)
   $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
   if (-not $resolvedHarness.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Refusing unsafe harness cleanup.' }
   [System.IO.Directory]::Delete($resolvedHarness, $true)
+}
+
+$bundleHarnessRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-theme-bundle-build-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $bundleHarnessRoot | Out-Null
+try {
+  $bundleHarnessExe = Join-Path $bundleHarnessRoot 'BundleCatalogHarness.exe'
+  & $csc '/nologo' '/target:exe' "/out:$bundleHarnessExe" `
+    '/reference:System.dll' '/reference:System.Core.dll' '/reference:System.Drawing.dll' '/reference:System.Web.Extensions.dll' `
+    '/reference:System.IO.Compression.dll' '/reference:System.IO.Compression.FileSystem.dll' `
+    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $Root 'desktop\ThemeCatalog.cs') `
+    (Join-Path $Root 'desktop\BundleManager.cs') (Join-Path $PSScriptRoot 'BundleCatalogHarness.cs')
+  if ($LASTEXITCODE -ne 0) { throw 'Bundle and Catalog harness compilation failed.' }
+  & $bundleHarnessExe $Root
+  if ($LASTEXITCODE -ne 0) { throw 'Bundle and Catalog harness failed.' }
+} finally {
+  $resolvedBundleHarness = [System.IO.Path]::GetFullPath($bundleHarnessRoot)
+  $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+  if (-not $resolvedBundleHarness.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Refusing unsafe bundle harness cleanup.' }
+  [System.IO.Directory]::Delete($resolvedBundleHarness, $true)
+}
+
+$supervisorHarnessRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-theme-supervisor-build-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $supervisorHarnessRoot | Out-Null
+try {
+  $supervisorHarnessExe = Join-Path $supervisorHarnessRoot 'RuntimeSupervisorHarness.exe'
+  & $csc '/nologo' '/target:exe' "/out:$supervisorHarnessExe" `
+    '/reference:System.dll' '/reference:System.Core.dll' `
+    (Join-Path $Root 'desktop\RuntimeSupervisor.cs') `
+    (Join-Path $PSScriptRoot 'RuntimeSupervisorHarness.cs')
+  if ($LASTEXITCODE -ne 0) { throw 'Runtime supervisor harness compilation failed.' }
+  & $supervisorHarnessExe
+  if ($LASTEXITCODE -ne 0) { throw 'Runtime supervisor recovery harness failed.' }
+} finally {
+  $resolvedSupervisorHarness = [System.IO.Path]::GetFullPath($supervisorHarnessRoot)
+  $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+  if (-not $resolvedSupervisorHarness.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Refusing unsafe supervisor harness cleanup.' }
+  [System.IO.Directory]::Delete($resolvedSupervisorHarness, $true)
+}
+
+$performanceHarnessRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-theme-performance-build-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $performanceHarnessRoot | Out-Null
+try {
+  $performanceHarnessExe = Join-Path $performanceHarnessRoot 'StudioPerformanceHarness.exe'
+  $presentationCore = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_32\PresentationCore' -Recurse -Filter PresentationCore.dll -ErrorAction Stop | Select-Object -First 1).FullName
+  $presentationFramework = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\PresentationFramework' -Recurse -Filter PresentationFramework.dll -ErrorAction Stop | Select-Object -First 1).FullName
+  $windowsBase = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\WindowsBase' -Recurse -Filter WindowsBase.dll -ErrorAction Stop | Select-Object -First 1).FullName
+  $systemXaml = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xaml' -Recurse -Filter System.Xaml.dll -ErrorAction Stop | Select-Object -First 1).FullName
+  & $csc '/nologo' '/target:exe' "/out:$performanceHarnessExe" `
+    '/reference:System.dll' '/reference:System.Core.dll' '/reference:System.Drawing.dll' '/reference:System.Web.Extensions.dll' `
+    '/reference:System.IO.Compression.dll' '/reference:System.IO.Compression.FileSystem.dll' `
+    "/reference:$systemXaml" "/reference:$windowsBase" "/reference:$presentationCore" `
+    "/reference:$presentationFramework" '/reference:System.Windows.Forms.dll' `
+    (Join-Path $Root 'desktop\StudioClient.cs') (Join-Path $Root 'desktop\ThemeEngine.cs') `
+    (Join-Path $Root 'desktop\ThemeCatalog.cs') (Join-Path $Root 'desktop\BundleManager.cs') `
+    (Join-Path $Root 'desktop\RuntimeSupervisor.cs') (Join-Path $Root 'desktop\RuntimeAssetCache.cs') `
+    (Join-Path $Root 'desktop\UpdateService.cs') (Join-Path $PSScriptRoot 'StudioPerformanceHarness.cs')
+  if ($LASTEXITCODE -ne 0) { throw 'Studio performance harness compilation failed.' }
+  if ($MeasureIdleCpu) { & $performanceHarnessExe $Root '--idle-120' }
+  else { & $performanceHarnessExe $Root }
+  if ($LASTEXITCODE -ne 0) { throw 'Studio 100-theme performance harness failed.' }
+} finally {
+  $resolvedPerformanceHarness = [System.IO.Path]::GetFullPath($performanceHarnessRoot)
+  $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+  if (-not $resolvedPerformanceHarness.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Refusing unsafe performance harness cleanup.' }
+  [System.IO.Directory]::Delete($resolvedPerformanceHarness, $true)
 }
 
 $pythonCommand = Get-Command python -ErrorAction Stop
@@ -198,45 +297,6 @@ foreach ($presetDirectory in Get-ChildItem -LiteralPath (Join-Path $Root 'preset
   $preset = $presetDirectory.Name
   & $python (Join-Path $Scripts 'validate_theme_v2.py') '--theme-dir' $presetDirectory.FullName
   if ($LASTEXITCODE -ne 0) { throw "Bundled Theme Pack v2 failed validation: $preset" }
-}
-
-$temporary = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-theme-studio-test-" + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $temporary | Out-Null
-try {
-  $stateRoot = Join-Path $temporary 'state'
-  $engine = Install-DreamSkinRuntimeEngine -SkillRoot $Root -StateRoot $stateRoot
-  $paths = Initialize-DreamSkinThemeStore -SkillRoot $engine.Root -StateRoot $stateRoot
-  $themes = @(Get-DreamSkinSavedThemes -StateRoot $stateRoot -SkipImageMetadata)
-  $ids = @($themes.Id)
-  foreach ($expected in @(
-    'immersive-dark','clear-light','obsidian-gold',
-    'doupo-cai-lin-heaven-python','doupo-medusa-green-lotus-evolution','doupo-nalan-dazzling-sunset',
-    'doupo-qing-lin-triple-pupils','doupo-xiao-yan-flame-lotus','doupo-xiao-yixian-poison-world',
-    'doupo-xun-er-emperor-seal','doupo-yun-yun-fallen-massacre','doupo-zi-yan-dragon-sword'
-  )) {
-    if ($ids -notcontains $expected) { throw "Theme store missing bundled preset: $expected" }
-  }
-  if ($ids.Count -ne 12) { throw "Expected 12 bundled Theme Pack v2 presets, got $($ids.Count)." }
-  $initial = Read-DreamSkinTheme -ThemeDirectory $paths.Active
-  if ($initial.Theme.id -cne 'immersive-dark' -or $initial.Theme.schemaVersion -ne 2) { throw 'Unexpected initial Theme Pack v2.' }
-  $selected = $themes | Where-Object Id -CEQ 'clear-light'
-  $active = Use-DreamSkinSavedTheme -ThemeDirectory $selected.Path -StateRoot $stateRoot
-  if ($active.Theme.id -cne 'clear-light' -or $active.Theme.layout.mode -cne 'native') { throw 'Atomic v2 activation failed.' }
-
-  $escape = Join-Path $temporary 'outside.svg'
-  Set-Content -LiteralPath $escape -Value '<svg xmlns="http://www.w3.org/2000/svg" />' -Encoding utf8
-  $themePath = Join-Path $paths.Active 'theme.json'
-  $payload = Get-Content -Raw -LiteralPath $themePath | ConvertFrom-Json
-  $payload.assets.icons.send = '..\outside.svg'
-  $payload | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $themePath -Encoding utf8
-  $rejected = $false
-  try { $null = Read-DreamSkinTheme -ThemeDirectory $paths.Active } catch { $rejected = $true }
-  if (-not $rejected) { throw 'Managed runtime accepted an escaping asset path.' }
-} finally {
-  $resolved = [System.IO.Path]::GetFullPath($temporary)
-  $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
-  if (-not $resolved.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Refusing unsafe test cleanup.' }
-  [System.IO.Directory]::Delete($resolved, $true)
 }
 
 Write-Host 'PASS: Codex Theme Studio unit, schema, security, transaction, and runtime tests completed.'

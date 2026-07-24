@@ -2,7 +2,7 @@
 
 ## 当前发布模型
 
-Codex Theme Studio 2.6 起以 WiX MSI 为 Windows 主安装包。MSI 使用稳定 `UpgradeCode` 和按版本确定生成的 `ProductCode`，安装到 `%LOCALAPPDATA%\Programs\Codex Theme Studio`，由 Windows Installer 提供原位升级、修复、卸载和失败事务回滚。
+Codex Theme Studio 2.7 继续以 WiX MSI 为 Windows 主安装包。MSI 使用稳定 `UpgradeCode` 和按版本确定生成的 `ProductCode`，安装到 `%LOCALAPPDATA%\Programs\Codex Theme Studio`，由 Windows Installer 提供原位升级、修复、卸载和失败事务回滚。
 
 每个版本暂时同时生成两种文件：
 
@@ -54,7 +54,7 @@ Codex Theme Studio 2.6 起以 WiX MSI 为 Windows 主安装包。MSI 使用稳�
 winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --accept-package-agreements
 
 .\scripts\build-windows-installer.ps1 `
-  -AppVersion 2.6.1 `
+  -AppVersion 2.7.0 `
   -GitHubRepository WOHUPA/Amazon-Skills `
   -UpdateReleaseTag codex-theme-studio-latest `
   -SignMode None
@@ -64,11 +64,11 @@ winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --ac
 
 ```powershell
 .\scripts\new-update-manifest.ps1 `
-  -Version 2.6.1 `
+  -Version 2.7.0 `
   -Repository WOHUPA/Amazon-Skills `
   -ReleaseTagPrefix codex-theme-studio-v `
-  -InstallerPath .\dist\Codex-Theme-Studio-2.6.1-Windows-x64.msi `
-  -BridgeInstallerPath .\dist\Codex-Theme-Studio-Setup-2.6.1.exe `
+  -InstallerPath .\dist\Codex-Theme-Studio-2.7.0-Windows-x64.msi `
+  -BridgeInstallerPath .\dist\Codex-Theme-Studio-Setup-2.7.0.exe `
   -SecretKeyPath <private-minisign-key>
 ```
 

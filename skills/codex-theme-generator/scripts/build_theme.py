@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from bundle_theme import create_bundle
 from compile_native_theme import compile_payload as compile_native_payload, write_native_files
 
 from theme_common import (
@@ -25,7 +26,7 @@ from theme_common import (
 )
 
 
-GENERATOR_VERSION = "2.3.0"
+GENERATOR_VERSION = "2.7.0"
 SAFE_LAYOUT = {"mode": "native", "sidebarWidth": 240, "contentMaxWidth": 920,
                "composerOffset": 0, "density": "comfortable"}
 
@@ -93,6 +94,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--icon-dir", type=Path)
     parser.add_argument("--source", choices=("generated", "provided", "none", "migrated"))
     parser.add_argument("--codex-min-version", default="26.715")
+    parser.add_argument("--bundle-output", type=Path)
+    parser.add_argument("--series-id", default="custom")
+    parser.add_argument("--series-name", default="自定义主题")
     return parser.parse_args()
 
 
@@ -123,11 +127,11 @@ def host_adapter_registry_path() -> Path:
     return candidate
 
 
-def studio_cli_path() -> Path | None:
+def studio_client_path() -> Path | None:
     local_app_data = os.environ.get("LOCALAPPDATA")
     if not local_app_data:
         return None
-    return Path(local_app_data) / "CodexThemeStudio" / "engine" / "scripts" / "theme-studio.ps1"
+    return Path(local_app_data) / "Programs" / "Codex Theme Studio" / "CodexThemeStudio.exe"
 
 
 def assert_layout_approved(mode: str, codex_version: str | None) -> None:
@@ -284,12 +288,16 @@ def write_theme(root: Path, theme: dict[str, Any]) -> None:
         write_native_files(root, compile_native_payload(theme))
 
 
-def atomic_build(args: argparse.Namespace) -> tuple[Path, list[str]]:
+def atomic_build(args: argparse.Namespace) -> tuple[Path, list[str], Path | None]:
     output = args.output_dir.expanduser().resolve()
     if output.exists():
         raise FileExistsError(f"refusing to overwrite existing path: {output}")
+    bundle_output = args.bundle_output.expanduser().resolve() if args.bundle_output else None
+    if bundle_output and bundle_output.exists():
+        raise FileExistsError(f"refusing to overwrite existing path: {bundle_output}")
     output.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{output.name}-", dir=output.parent))
+    bundle_staging: Path | None = None
     built_ids: list[str] = []
     try:
         if args.pair:
@@ -314,32 +322,58 @@ def atomic_build(args: argparse.Namespace) -> tuple[Path, list[str]]:
         reports = [validate(item) for item in validation_roots]
         if any(report["status"] != "COMPLETE" for report in reports):
             raise ValueError("generated theme failed validation: " + json.dumps(reports, ensure_ascii=False))
+        final_ids = built_ids or [args.theme_id]
+        if bundle_output:
+            theme_roots = (
+                [(item, staging / "themes" / item) for item in final_ids]
+                if args.pair
+                else [(args.theme_id, staging)]
+            )
+            bundle_staging = create_bundle(
+                bundle_output,
+                bundle_id=f"{args.series_id}-{args.theme_id}",
+                name=args.name,
+                series_id=args.series_id,
+                series_name=args.series_name,
+                themes=theme_roots,
+            )
         os.replace(staging, output)
-        return output, built_ids or [args.theme_id]
+        if bundle_output and bundle_staging:
+            try:
+                os.replace(bundle_staging, bundle_output)
+            except Exception:
+                shutil.rmtree(output, ignore_errors=True)
+                raise
+        return output, final_ids, bundle_output
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
+        if bundle_staging:
+            bundle_staging.unlink(missing_ok=True)
         raise
 
 
 def main() -> int:
     try:
-        output, theme_ids = atomic_build(parse_args())
+        output, theme_ids, bundle_output = atomic_build(parse_args())
     except (FileExistsError, FileNotFoundError, OSError, ValueError) as error:
         print(json.dumps({
             "status": "BLOCKED",
             "packStatus": "BLOCKED",
+            "bundleStatus": "BLOCKED",
             "error": str(error),
             "importStatus": "NOT_RUN",
             "activationStatus": "NOT_RUN",
         }, ensure_ascii=False))
         return 2
-    studio_cli = studio_cli_path()
+    studio_client = studio_client_path()
     print(json.dumps({
         "status": "COMPLETE",
         "packStatus": "COMPLETE",
         "themeDir": str(output),
         "themeIds": theme_ids,
-        "studioDetected": bool(studio_cli and studio_cli.is_file()),
+        "bundlePath": str(bundle_output) if bundle_output else None,
+        "bundleStatus": "COMPLETE" if bundle_output else "NOT_REQUESTED",
+        "studioDetected": bool(studio_client and studio_client.is_file()),
         "handoffStatus": "READY",
         "importStatus": "NOT_RUN",
         "activationStatus": "NOT_RUN",

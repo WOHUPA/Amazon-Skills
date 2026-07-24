@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex 主题选择器"
+  short_description: "原生 Theme Studio 引擎操作入口"
+  default_prompt: "Use $codex-theme-selector as a thin proxy to the installed Codex Theme Studio native engine. Preview and atomically import the exact .codextheme Bundle I select without activating it, and require explicit confirmation for every write action."
+policy:
+  allow_implicit_invocation: true

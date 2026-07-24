@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "2.6.1"
+  #define AppVersion "2.7.0"
 #endif
 #ifndef SourceExe
   #error SourceExe must point to the compiled CodexThemeStudio.exe
@@ -62,6 +62,13 @@ Type: files; Name: "{userprograms}\Codex Theme Studio.lnk"
 Name: "{group}\Codex Theme Studio"; Filename: "{app}\CodexThemeStudio.exe"; WorkingDir: "{app}"
 Name: "{group}\卸载 Codex Theme Studio"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Codex Theme Studio"; Filename: "{app}\CodexThemeStudio.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+
+[Registry]
+Root: HKCU; Subkey: "Software\Classes\.codextheme"; ValueType: string; ValueName: ""; ValueData: "CodexThemeStudio.Bundle"; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\CodexThemeStudio.Bundle"; ValueType: string; ValueName: ""; ValueData: "Codex Theme Bundle"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\CodexThemeStudio.Bundle\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\CodexThemeStudio.exe,0"
+Root: HKCU; Subkey: "Software\Classes\CodexThemeStudio.Bundle\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\CodexThemeStudio.exe"" --open-package ""%1"""
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "CodexThemeStudio"; ValueData: """{app}\CodexThemeStudio.exe"" --background"; Flags: uninsdeletevalue
 
 [Run]
 Filename: "{app}\CodexThemeStudio.exe"; Description: "启动 Codex Theme Studio"; Flags: nowait postinstall skipifsilent

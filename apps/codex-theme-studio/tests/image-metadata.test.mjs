@@ -15,9 +15,9 @@ const windowsRoot = path.resolve(here, "..");
 const featuredPath = path.join(
   windowsRoot,
   "presets",
-  "legacy",
-  "preset-xiao-yan-inferno",
-  "background.jpg",
+  "doupo-cai-lin-heaven-python",
+  "assets",
+  "home-background.jpg",
 );
 const featured = await fs.readFile(featuredPath);
 const helper = path.join(windowsRoot, "scripts", "image-metadata.mjs");

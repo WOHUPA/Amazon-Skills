@@ -1,6 +1,7 @@
 [
   {"prompt":"生成一套深色 Codex 主题，背景、图标、菜单和输入区要配套。","should_trigger":true},
   {"prompt":"做一套可分别切换的 Codex 深浅双主题。","should_trigger":true},
+  {"prompt":"生成斗破苍穹系列主题，并交付一个能一键导入 Studio 的 .codextheme 文件。","should_trigger":true},
   {"prompt":"用黑金模板生成 cinematic Codex 主题。","should_trigger":true},
   {"prompt":"更新 Codex Theme Studio 工具。","should_trigger":false},
   {"prompt":"导入刚生成的 Theme Pack。","should_trigger":false},
