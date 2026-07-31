@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2.2.1",
+  "registryVersion": "2.2.8",
   "fallback": {
     "layout": "native",
     "status": "BLOCKED"
@@ -10,10 +10,14 @@
       "id": "windows-26.715.8383.0",
       "platform": "windows",
       "codexVersions": [
-        "26.715.8383.0"
+        "26.715.8383.0",
+        "26.721.4979.0",
+        "26.727.4816.0"
       ],
       "componentBuilds": [
-        "26.715.61943"
+        "26.715.61943",
+        "index-DqK89hOt",
+        "index-ChJf0nR3"
       ],
       "rendererFingerprint": "codex-theme-studio-v2",
       "structureSignatures": {
@@ -23,7 +27,7 @@
           "max": 1
         },
         "shell": {
-          "selectors": ["main.main-surface"],
+          "selectors": ["main.main-surface", "[data-app-shell-main-surface]"],
           "min": 1,
           "max": 1
         },
@@ -64,7 +68,7 @@
       "components": {
         "shell": {
           "kind": "layout",
-          "selectors": ["main.main-surface"],
+          "selectors": ["main.main-surface", "[data-app-shell-main-surface]"],
           "min": 1,
           "max": 1
         },
@@ -79,6 +83,7 @@
           "selectors": [
             "[data-app-action-timeline-scroll]",
             "main.main-surface:has([data-testid=\"home-icon\"])",
+            "[data-app-shell-main-surface]:has([data-testid=\"home-icon\"])",
             "[role=\"main\"]"
           ],
           "min": 1,
@@ -86,7 +91,10 @@
         },
         "home": {
           "kind": "page",
-          "selectors": ["main.main-surface:has([data-testid=\"home-icon\"])"],
+          "selectors": [
+            "main.main-surface:has([data-testid=\"home-icon\"])",
+            "[data-app-shell-main-surface]:has([data-testid=\"home-icon\"])"
+          ],
           "min": 1,
           "max": 1
         },
@@ -139,7 +147,7 @@
         },
         "taskSidebar": {
           "kind": "panel",
-          "selectors": ["[data-testid=\"task-sidebar\"]", "[data-testid=\"thread-panel\"]", "aside:not(.app-shell-left-panel)"],
+          "selectors": ["[data-testid=\"task-sidebar\"]", "[data-testid=\"thread-panel\"]"],
           "min": 1,
           "max": 2
         }
@@ -182,7 +190,10 @@
       },
       "sceneContracts": {
         "home": {
-          "detect": ["main.main-surface:has([data-testid=\"home-icon\"])"],
+          "detect": [
+            "main.main-surface:has([data-testid=\"home-icon\"])",
+            "[data-app-shell-main-surface]:has([data-testid=\"home-icon\"])"
+          ],
           "requiredComponents": ["shell", "sidebar", "home", "composer"],
           "expectedIconSlots": ["newTask", "attach", "send"],
           "nonOverlapPairs": [["sidebar", "composer"]]
@@ -212,7 +223,7 @@
           "nonOverlapPairs": []
         },
         "task-sidebar": {
-          "detect": ["[data-testid=\"task-sidebar\"]", "[data-testid=\"thread-panel\"]", "aside:not(.app-shell-left-panel)"],
+          "detect": ["[data-testid=\"task-sidebar\"]", "[data-testid=\"thread-panel\"]"],
           "requiredComponents": ["taskSidebar"],
           "expectedIconSlots": ["history"],
           "nonOverlapPairs": [["sidebar", "taskSidebar"]]

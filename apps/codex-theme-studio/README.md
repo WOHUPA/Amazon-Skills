@@ -39,6 +39,7 @@ CodexThemeStudio.exe --engine status --result-file result.json
 CodexThemeStudio.exe --engine list --result-file result.json
 CodexThemeStudio.exe --engine preview --package C:\Themes\fantasy.codextheme --result-file result.json
 CodexThemeStudio.exe --engine import --package C:\Themes\fantasy.codextheme --confirm --result-file result.json
+CodexThemeStudio.exe --engine create-recipe --recipe C:\Themes\recipe.json --image C:\Themes\hero.png --confirm --result-file result.json
 CodexThemeStudio.exe --engine activate --theme immersive-dark --confirm --result-file result.json
 CodexThemeStudio.exe --engine verify --result-file result.json
 CodexThemeStudio.exe --engine rollback --confirm --result-file result.json
@@ -46,7 +47,9 @@ CodexThemeStudio.exe --engine rollback --confirm --result-file result.json
 
 客户端“创建新主题”按钮会复制精确的 `$codex-theme-generator` 提示词并打开官方 Codex。当前没有使用未经验证的提示词深链，因此用户需要在新任务中粘贴该提示词；提示词会优先收集本地参考图、高质量背景方向、主题目录和 `.codextheme` 目标。生成完成后可双击 Bundle 或点击“导入主题”直接预览并导入 Studio，无需经过 Selector，激活仍需单独确认。
 
-主题页按系列组织，首次迁移生成“基础主题”与“斗破苍穹”，并提供“全部/未分类”虚拟系列。用户可创建、重命名、排序、删除系列和移动主题；删除系列只把主题移到“未分类”。`.codextheme` 双击后通过单实例命名管道打开导入预览，严格校验后整包导入，且不会自动激活。
+主题页按系列组织，首次迁移生成“基础主题”与“斗破苍穹”，并提供“全部/未分类”虚拟系列。用户可直接使用中文创建、重命名、排序、删除系列和移动主题，安全内部 ID 由客户端自动生成；删除系列只把主题移到“未分类”。`.codextheme` 双击后通过单实例命名管道打开导入预览，严格校验后整包导入，且不会自动激活。
+
+Theme Recipe v1 也可以与一张本地 PNG/JPEG 主图编译为 Theme Pack v2。配方只描述受控视觉意图，不能包含 CSS、脚本、命令或路径；当前所有上游布局均安全映射为已验证的 `native` 布局。编译结果进入“AI 配方”系列，始终需要用户单独确认后才会应用。完整对标与路线见 [`docs/upstream-reference.md`](docs/upstream-reference.md)。
 
 主题详情支持选择本地 PNG/JPEG 作为首页与任务页背景。图片必须至少 1600×900、接近 16:9，最大 7680×4320。非当前主题可在二次确认后删除；客户端会把删除内容保留在 `%LOCALAPPDATA%\CodexThemeStudio\backups\deleted-themes`，当前正在使用的主题不能删除。
 

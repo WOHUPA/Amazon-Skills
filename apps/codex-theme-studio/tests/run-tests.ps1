@@ -43,11 +43,16 @@ $guiSource = Get-Content -Raw -LiteralPath $nativeLayout
 $nativeClientSource = Get-Content -Raw -LiteralPath $nativeClient
 $updateSource = Get-Content -Raw -LiteralPath $updateSourcePath
 $nativeEngineSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'desktop\ThemeEngine.cs')
+$recipeCompilerPath = Join-Path $Root 'desktop\RecipeThemeCompiler.cs'
 $supervisorSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'desktop\RuntimeSupervisor.cs')
 $injectorPath = Join-Path $Scripts 'injector.mjs'
 $rendererPath = Join-Path $Root 'assets\renderer-inject.js'
 if ($guiSource -notmatch 'CreateThemeButton' -or $nativeClientSource -notmatch 'OpenThemeGenerator') {
   throw 'Theme Studio create-theme handoff is missing.'
+}
+if ($guiSource -notmatch 'RecipeThemeButton' -or $nativeClientSource -notmatch 'CompileRecipeTheme' -or
+    $nativeClientSource -notmatch '不会应用主题') {
+  throw 'Theme Recipe compilation UI must preserve the explicit activation boundary.'
 }
 if ($guiSource -notmatch 'SeriesStrip' -or $guiSource -notmatch 'ImportThemeButton' -or
     $guiSource -notmatch 'RuntimeSessionPanel' -or $guiSource -notmatch 'RuntimeActionsPanel') {
@@ -74,6 +79,12 @@ if ($guiSource -notmatch 'HeroBackgroundButton' -or $guiSource -notmatch 'HeroDe
     $nativeEngineSource -notmatch 'deletedThemeIds') {
   throw 'Theme Studio local background or recoverable theme deletion flow is incomplete.'
 }
+if ($nativeClientSource -notmatch '系列名称（支持中文）' -or
+    $nativeClientSource -match '系列 ID（小写字母、数字和连字符）' -or
+    $nativeEngineSource -notmatch 'StandardOutputEncoding = new UTF8Encoding' -or
+    $nativeEngineSource -notmatch 'StandardErrorEncoding = new UTF8Encoding') {
+  throw 'Chinese series naming or UTF-8 child-process error handling is incomplete.'
+}
 if ($nativeClientSource -notmatch 'CancellationTokenSource' -or
     $nativeClientSource -notmatch 'ExecuteEngineAsync' -or
     $nativeClientSource -notmatch 'TimeSpan\.FromSeconds\(120\)' -or
@@ -82,8 +93,15 @@ if ($nativeClientSource -notmatch 'CancellationTokenSource' -or
     $nativeEngineSource -notmatch 'WaitForExit\(120\)') {
   throw 'Theme Studio GUI commands must run asynchronously with timeout and operation guards.'
 }
+if (-not (Test-Path -LiteralPath $recipeCompilerPath -PathType Leaf) -or
+    $nativeEngineSource -notmatch 'CreateRecipeTheme') {
+  throw 'Theme Recipe v1 compilation bridge is missing.'
+}
 if ($guiSource -match '<Viewbox' -or
-    $guiSource -notmatch '选择你的工作氛围' -or
+    $guiSource -notmatch '主题画廊' -or
+    $guiSource -notmatch 'AI 生成主题' -or
+    $guiSource -notmatch '自定义主题' -or
+    $guiSource -notmatch '创作者中心' -or
     $guiSource -notmatch 'ActivityDock' -or
     $guiSource -notmatch 'CancelOperationButton' -or
     $guiSource -notmatch 'Width="1380" Height="840"') {
@@ -129,6 +147,7 @@ if ($nativeClientSource -notmatch 'StudioTray' -or $nativeClientSource -notmatch
   throw 'Theme Studio launcher, taskbar, and tray do not share the multi-resolution icon pipeline.'
 }
 $launcherSource = Get-Content -Raw -LiteralPath (Join-Path $Root 'desktop\Launcher.cs')
+if ($launcherSource -notmatch 'create-recipe') { throw 'Theme Recipe v1 CLI entrypoint is missing.' }
 if ($launcherSource -notmatch 'CodexThemeStudio.Runtime.zip' -or $launcherSource -notmatch 'PrepareUninstall') {
   throw 'Windows launcher does not embed the runtime or expose uninstall preparation.'
 }
@@ -152,9 +171,14 @@ if ($installerSource -notmatch '\\.codextheme' -or $installerSource -notmatch '-
 }
 if ($nativeClientSource -notmatch 'ThemePageSize = 18' -or
     $nativeClientSource -notmatch 'visible\.Skip\(themePageStart\)\.Take\(ThemePageSize\)' -or
-    $launcherSource -notmatch '"status", "list", "preview", "import", "activate", "rollback"' -or
-    $launcherSource -match 'normalized == "delete"|GetArgumentValue\(args, "--image"\)') {
+    $launcherSource -notmatch '"status", "list", "preview", "import", "create-recipe", "activate", "rollback"' -or
+    $launcherSource -match 'normalized == "delete"') {
   throw 'Theme list virtualization or the public native CLI boundary regressed.'
+}
+if ($nativeClientSource -notmatch 'post-success-refresh' -or
+    $nativeClientSource -notmatch 'studio-client\.log' -or
+    $nativeClientSource -notmatch '主题已经切换成功，但 Studio 刷新界面时遇到问题') {
+  throw 'Theme operations can regress into false failure reports or lose native client diagnostics.'
 }
 $releaseWorkflow = Get-Content -Raw -LiteralPath (Join-Path $Root '.github\workflows\release.yml')
 $manifestSource = Get-Content -Raw -LiteralPath (Join-Path $Scripts 'new-update-manifest.ps1')
@@ -213,7 +237,7 @@ try {
   & $csc '/nologo' '/target:exe' "/out:$harnessExe" `
     '/reference:System.dll' '/reference:System.Core.dll' '/reference:System.Drawing.dll' '/reference:System.Web.Extensions.dll' `
     '/reference:System.IO.Compression.dll' '/reference:System.IO.Compression.FileSystem.dll' `
-    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $Root 'desktop\ThemeCatalog.cs') `
+    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $Root 'desktop\RecipeThemeCompiler.cs') (Join-Path $Root 'desktop\AiThemeJobs.cs') (Join-Path $Root 'desktop\CodexAppServerClient.cs') (Join-Path $Root 'desktop\ThemeCatalog.cs') `
     (Join-Path $Root 'desktop\BundleManager.cs') (Join-Path $PSScriptRoot 'ThemeManagementHarness.cs')
   if ($LASTEXITCODE -ne 0) { throw 'Theme management harness compilation failed.' }
   & $harnessExe $Root
@@ -232,7 +256,7 @@ try {
   & $csc '/nologo' '/target:exe' "/out:$bundleHarnessExe" `
     '/reference:System.dll' '/reference:System.Core.dll' '/reference:System.Drawing.dll' '/reference:System.Web.Extensions.dll' `
     '/reference:System.IO.Compression.dll' '/reference:System.IO.Compression.FileSystem.dll' `
-    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $Root 'desktop\ThemeCatalog.cs') `
+    (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $Root 'desktop\RecipeThemeCompiler.cs') (Join-Path $Root 'desktop\AiThemeJobs.cs') (Join-Path $Root 'desktop\CodexAppServerClient.cs') (Join-Path $Root 'desktop\ThemeCatalog.cs') `
     (Join-Path $Root 'desktop\BundleManager.cs') (Join-Path $PSScriptRoot 'BundleCatalogHarness.cs')
   if ($LASTEXITCODE -ne 0) { throw 'Bundle and Catalog harness compilation failed.' }
   & $bundleHarnessExe $Root
@@ -275,7 +299,7 @@ try {
     '/reference:System.IO.Compression.dll' '/reference:System.IO.Compression.FileSystem.dll' `
     "/reference:$systemXaml" "/reference:$windowsBase" "/reference:$presentationCore" `
     "/reference:$presentationFramework" '/reference:System.Windows.Forms.dll' `
-    (Join-Path $Root 'desktop\StudioClient.cs') (Join-Path $Root 'desktop\ThemeEngine.cs') `
+    (Join-Path $Root 'desktop\StudioClient.cs') (Join-Path $Root 'desktop\ThemeEngine.cs') (Join-Path $Root 'desktop\RecipeThemeCompiler.cs') (Join-Path $Root 'desktop\AiThemeJobs.cs') (Join-Path $Root 'desktop\CodexAppServerClient.cs') `
     (Join-Path $Root 'desktop\ThemeCatalog.cs') (Join-Path $Root 'desktop\BundleManager.cs') `
     (Join-Path $Root 'desktop\RuntimeSupervisor.cs') (Join-Path $Root 'desktop\RuntimeAssetCache.cs') `
     (Join-Path $Root 'desktop\UpdateService.cs') (Join-Path $PSScriptRoot 'StudioPerformanceHarness.cs')

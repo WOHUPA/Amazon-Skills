@@ -54,6 +54,9 @@ namespace CodexThemeStudio.Desktop
             Assert(catalog.GetSeriesId("immersive-dark") == "basic", "Basic migration failed.");
             Assert(catalog.GetSeriesId("doupo-test") == "doupo", "Doupo migration failed.");
             Assert(catalog.GetSeriesId("custom-one") == ThemeCatalog.UnclassifiedSeriesId, "Unclassified migration failed.");
+            string chineseSeriesId = catalog.CreateSeries("仙逆主题");
+            Assert(chineseSeriesId.StartsWith("series-", StringComparison.Ordinal), "Chinese series should receive an internal safe ID.");
+            Assert(catalog.GetSeries().Any(item => item.Id == chineseSeriesId && item.Name == "仙逆主题"), "Chinese series name was not preserved.");
             catalog.RenameSeries("basic", "我的基础");
             catalog.MoveTheme("custom-one", "basic");
             catalog.MoveSeries("basic", 1);
@@ -66,6 +69,7 @@ namespace CodexThemeStudio.Desktop
             Assert(reopened.GetSeries().Any(item => item.Id == "basic" && item.Name == "我的基础"), "Local series rename was overwritten.");
             Assert(!reopened.GetSeries().Any(item => item.Id == "doupo"), "Deleted built-in series was recreated.");
             Assert(reopened.GetSeriesId("custom-one") == "basic", "Local theme assignment was not preserved.");
+            Assert(reopened.GetSeries().Any(item => item.Id == chineseSeriesId && item.Name == "仙逆主题"), "Chinese series did not survive reload.");
         }
 
         private static void TestBundles(string root, string preset)

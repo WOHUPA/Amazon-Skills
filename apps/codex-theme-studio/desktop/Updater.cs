@@ -12,9 +12,9 @@ using System.Web.Script.Serialization;
 [assembly: System.Reflection.AssemblyCompany("Codex Theme Studio")]
 [assembly: System.Reflection.AssemblyProduct("Codex Theme Studio")]
 [assembly: System.Reflection.AssemblyCopyright("Copyright (c) 2026")]
-[assembly: System.Reflection.AssemblyVersion("2.7.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("2.7.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersion("2.7.0")]
+[assembly: System.Reflection.AssemblyVersion("2.7.8.0")]
+[assembly: System.Reflection.AssemblyFileVersion("2.7.8.0")]
+[assembly: System.Reflection.AssemblyInformationalVersion("2.7.8")]
 
 namespace CodexThemeStudio.Updater
 {

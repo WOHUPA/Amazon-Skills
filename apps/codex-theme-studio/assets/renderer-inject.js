@@ -2,11 +2,30 @@
   const STATE_KEY = "__CODEX_DREAM_SKIN_STATE__";
   const STYLE_ID = "codex-dream-skin-style";
   const CHROME_ID = "codex-dream-skin-chrome";
-  const VERSION = "2.2.1";
+  const VERSION = "2.2.8";
   const ADAPTER_PROTOCOL = "codex-theme-studio-v2";
   const COMPLETE = "COMPLETE";
   const PARTIAL = "PARTIAL";
   const BLOCKED = "BLOCKED";
+  // Codex's current native sidebar controls are 21.59 CSS px at 125% scaling.
+  // Keep the audit above the icon glyph size without rejecting untouched host controls.
+  const MIN_NATIVE_HIT_TARGET = 20;
+
+  const isHitTargetInteractive = (node) => {
+    for (let candidate = node; candidate && candidate !== document.body; candidate = candidate.parentElement) {
+      if (candidate.matches?.("button, [role=button], a[href], input, textarea, select, [tabindex]")) {
+        return getComputedStyle(candidate).pointerEvents !== "none" && candidate.getAttribute("aria-disabled") !== "true";
+      }
+    }
+    return getComputedStyle(node).pointerEvents !== "none";
+  };
+
+  const isInViewport = (rect) => rect.right > 0 && rect.bottom > 0
+    && rect.x < innerWidth && rect.y < innerHeight;
+
+  const hasUsableHitTarget = (node, rect) => !isInViewport(rect)
+    || (rect.width >= MIN_NATIVE_HIT_TARGET && rect.height >= MIN_NATIVE_HIT_TARGET
+      && isHitTargetInteractive(node));
   const ROOT_CLASSES = [
     "codex-dream-skin", "dream-theme-light", "dream-theme-dark",
     "dream-focus-left", "dream-focus-center", "dream-focus-right",
@@ -45,6 +64,8 @@
   const NATIVE_ICON_HIDDEN_CLASS = "studio-native-icon-hidden";
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const installToken = {};
+  const objectUrls = new Set();
+  const materializedByDataUrl = new Map();
   const semanticObservationCache = {
     button: new Set(),
     menu: new Set(),
@@ -133,6 +154,44 @@
   const previous = window[STATE_KEY];
   previous?.cleanup?.();
   window.__CODEX_DREAM_SKIN_DISABLED__ = false;
+  const materializeAssetUrl = (dataUrl) => {
+    if (!dataUrl) return null;
+    if (typeof dataUrl !== "string") throw new Error("Theme asset must be a data URL");
+    if (materializedByDataUrl.has(dataUrl)) return materializedByDataUrl.get(dataUrl);
+    const match = /^data:([^;,]+);base64,([\s\S]+)$/.exec(dataUrl);
+    if (!match) throw new Error("Theme asset data URL is invalid");
+    const binary = atob(match[2]);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    const objectUrl = URL.createObjectURL(new Blob([bytes], { type: match[1] }));
+    objectUrls.add(objectUrl);
+    materializedByDataUrl.set(dataUrl, objectUrl);
+    return objectUrl;
+  };
+  // Chromium drops multi-megabyte CSS custom-property values. Keep the CDP payload
+  // self-contained, then bind short renderer-local blob URLs to the visual layer.
+  const assetUrls = (() => {
+    try {
+      return {
+        homeBackground: materializeAssetUrl(assets.homeBackground),
+        taskBackground: materializeAssetUrl(assets.taskBackground),
+        icons: Object.fromEntries(
+          Object.entries(assets.icons || {}).map(([slot, dataUrl]) => [slot, materializeAssetUrl(dataUrl)]),
+        ),
+      };
+    } catch (error) {
+      for (const objectUrl of objectUrls) URL.revokeObjectURL(objectUrl);
+      objectUrls.clear();
+      materializedByDataUrl.clear();
+      throw error;
+    }
+  })();
+  const visualAssetsRequested = Boolean(
+    assets.homeBackground || assets.taskBackground
+      || Object.values(assets.icons || {}).some(Boolean),
+  );
 
   const queryAll = (selectors) => {
     const nodes = new Set();
@@ -243,8 +302,8 @@
     const audit = {};
     const targets = hostAdapter?.iconTargets || {};
     for (const [slot, selectors] of Object.entries(targets)) {
-      const dataUrl = assets.icons?.[slot];
-      if (!dataUrl) continue;
+      const assetUrl = assetUrls.icons?.[slot];
+      if (!assetUrl) continue;
       const target = visibleNodes(selectors)[0];
       if (!target) {
         // 主动作可能被 Stop 等受信任原生互斥状态替换；审计前先恢复原生图标。
@@ -260,7 +319,7 @@
         icon.setAttribute("aria-hidden", "true");
         target.appendChild(icon);
       }
-      icon.style.setProperty("--studio-icon", `url(${JSON.stringify(dataUrl)})`);
+      icon.style.setProperty("--studio-icon", `url(${JSON.stringify(assetUrl)})`);
       target.classList.add(ICON_CLASS);
       const targetBounds = target.getBoundingClientRect();
       const nativeIcon = [...target.querySelectorAll("svg")].find(
@@ -286,8 +345,7 @@
       audit[slot] = {
         targetRect,
         iconRect,
-        hitTargetOk: targetRect.width >= 24 && targetRect.height >= 24
-          && getComputedStyle(target).pointerEvents !== "none",
+        hitTargetOk: hasUsableHitTarget(target, targetRect),
         iconTextOverlap: textRects(target).some((item) => intersects(iconRect, item)),
       };
       slots.push(slot);
@@ -316,8 +374,8 @@
       : m.shadow === "strong" ? "0 18px 48px rgb(0 0 0 / .34)"
         : "0 12px 36px rgb(0 0 0 / .18)";
     const assetValue = (dataUrl) => dataUrl ? `url(${JSON.stringify(dataUrl)})` : "none";
-    root.style.setProperty("--dream-art", assetValue(assets.homeBackground));
-    root.style.setProperty("--dream-task-art", assetValue(assets.taskBackground));
+    root.style.setProperty("--dream-art", assetValue(assetUrls.homeBackground));
+    root.style.setProperty("--dream-task-art", assetValue(assetUrls.taskBackground));
     root.style.setProperty("--dream-art-position", `${Math.round(a.focusX * 100)}% ${Math.round(a.focusY * 100)}%`);
     root.style.setProperty("--dream-accent", p.accent);
     root.style.setProperty("--dream-accent-ink", p.accentContrast);
@@ -407,6 +465,38 @@
     return scenes;
   };
 
+  const buildAssetAudit = (root) => {
+    const backgrounds = [
+      ["home", assets.homeBackground, assetUrls.homeBackground, "--dream-art"],
+      ["task", assets.taskBackground, assetUrls.taskBackground, "--dream-task-art"],
+    ];
+    const requestedBackgrounds = backgrounds.filter(([, requested]) => Boolean(requested));
+    const appliedBackgrounds = requestedBackgrounds
+      .filter(([, , objectUrl, property]) =>
+        Boolean(objectUrl) && root.style.getPropertyValue(property).includes(objectUrl))
+      .map(([name]) => name);
+    const requestedIcons = Object.entries(assets.icons || {})
+      .filter(([, requested]) => Boolean(requested))
+      .map(([slot]) => slot)
+      .sort();
+    const materializedIcons = requestedIcons.filter((slot) => Boolean(assetUrls.icons?.[slot]));
+    const failures = [];
+    if (appliedBackgrounds.length !== requestedBackgrounds.length) {
+      failures.push("BACKGROUND_ASSET_NOT_BOUND");
+    }
+    if (materializedIcons.length !== requestedIcons.length) {
+      failures.push("ICON_ASSET_NOT_MATERIALIZED");
+    }
+    return {
+      status: failures.length ? BLOCKED : COMPLETE,
+      requestedBackgrounds: requestedBackgrounds.map(([name]) => name),
+      appliedBackgrounds,
+      requestedIcons,
+      materializedIcons,
+      failures,
+    };
+  };
+
   const collectComponent = (name) => {
     const contract = hostAdapter?.components?.[name] || {};
     const nodes = visibleNodes(contract.selectors);
@@ -430,7 +520,7 @@
       }),
       hitTargetOk: !actionable || nodes.every((node) => {
         const rect = node.getBoundingClientRect();
-        return rect.width >= 24 && rect.height >= 24 && getComputedStyle(node).pointerEvents !== "none";
+        return hasUsableHitTarget(node, rect);
       }),
       styles: nodes.slice(0, 8).map((node) => {
         const style = getComputedStyle(node);
@@ -473,8 +563,7 @@
         state: alternateMatches[0].state,
         targetRect,
         iconRect: null,
-        hitTargetOk: targetRect.width >= 24 && targetRect.height >= 24
-          && getComputedStyle(target).pointerEvents !== "none",
+        hitTargetOk: hasUsableHitTarget(target, targetRect),
         iconTextOverlap: false,
         alternateStates: [alternateMatches[0].state],
       };
@@ -800,6 +889,7 @@
       }
       root.classList.add("dream-task-ambient");
       applyVariables(root, effectiveMode, effectiveDensity);
+      const assetAudit = buildAssetAudit(root);
 
       let style = document.getElementById(STYLE_ID);
       if (!style) {
@@ -872,6 +962,9 @@
       } else if (sceneAudit.status !== COMPLETE) {
         adapterStatus = sceneAudit.status;
         adapterReason = sceneAudit.errors.join(",");
+      } else if (assetAudit.status !== COMPLETE) {
+        adapterStatus = BLOCKED;
+        adapterReason = "VISUAL_ASSET_CONTRACT_FAILED";
       } else if (geometryAudit.status !== COMPLETE || contrastAudit.status !== COMPLETE) {
         adapterStatus = BLOCKED;
         adapterReason = "VISUAL_CONTRACT_FAILED";
@@ -893,7 +986,9 @@
           sceneAudit,
           geometryAudit,
           contrastAudit,
+          assetAudit,
           stylesEvidence,
+          visualAssetsRequested,
           evidenceMode: runtime.evidenceMode === true,
           requestedScene: runtime.requestedScene || null,
           auditCompleted: true,
@@ -915,6 +1010,9 @@
       document.removeEventListener(eventName, scheduleEnsure, true);
     }
     clearSkinDom();
+    for (const objectUrl of objectUrls) URL.revokeObjectURL(objectUrl);
+    objectUrls.clear();
+    materializedByDataUrl.clear();
     delete window[STATE_KEY];
     return true;
   };
@@ -966,7 +1064,9 @@
     sceneAudit: { status: PARTIAL, scenes: [], errors: ["INITIALIZING"], components: {} },
     geometryAudit: { status: PARTIAL, failures: [] },
     contrastAudit: { status: PARTIAL, ratios: {}, failures: [] },
+    assetAudit: { status: PARTIAL, failures: ["INITIALIZING"] },
     stylesEvidence: { status: PARTIAL, semanticStates: {}, components: {} },
+    visualAssetsRequested,
     evidenceMode: runtime.evidenceMode === true,
     auditCompleted: false,
   };

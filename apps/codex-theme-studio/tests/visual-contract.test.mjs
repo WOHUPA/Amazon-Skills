@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   evaluateLiveVerification,
+  evaluateRuntimeAcceptance,
   evaluateSceneGeometry,
   loadHostAdapterRegistry,
   resolveHostAdapter,
@@ -22,6 +23,12 @@ const known = resolveHostAdapter(registry, "26.715.8383.0");
 assert.equal(known.status, "COMPLETE");
 assert.equal(known.adapter.id, "windows-26.715.8383.0");
 assert.equal(known.adapter.layoutMatrix.native.status, "COMPLETE");
+const current = resolveHostAdapter(registry, "26.721.4979.0");
+assert.equal(current.status, "COMPLETE");
+assert.equal(current.adapter.id, known.adapter.id);
+const latest = resolveHostAdapter(registry, "26.727.4816.0");
+assert.equal(latest.status, "COMPLETE");
+assert.equal(latest.adapter.id, known.adapter.id);
 for (const mode of ["compact", "cinematic", "focus"]) {
   assert.notEqual(known.adapter.layoutMatrix[mode].status, "COMPLETE",
     `${mode} must remain experimental until every required scene is signed off.`);
@@ -92,6 +99,53 @@ const partial = evaluateLiveVerification({
   geometryAudit: { status: "COMPLETE", failures: [] },
 });
 assert.equal(partial.pass, false, "PARTIAL can never be a publish-success state.");
+assert.equal(evaluateRuntimeAcceptance(partial).runtimeAccepted, false);
+
+const compatibleNative = evaluateRuntimeAcceptance({
+  installed: true,
+  versionMatches: true,
+  stylePresent: true,
+  chromePresent: true,
+  chromePointerEvents: "none",
+  requestedLayoutMode: "native",
+  layoutMode: "native",
+  adapterStatus: "BLOCKED",
+  adapterReason: "UNKNOWN_HOST_VERSION",
+  sceneAudit: { status: "BLOCKED", errors: ["UNKNOWN_HOST_VERSION"] },
+  geometryAudit: { status: "COMPLETE", failures: [] },
+  contrastAudit: { status: "COMPLETE", failures: [] },
+  assetAudit: { status: "COMPLETE", failures: [] },
+  visualAssetsRequested: false,
+  requireSemanticEvidence: false,
+});
+assert.equal(compatibleNative.pass, false,
+  "Unknown hosts must remain blocked for strict verification and release evidence.");
+assert.equal(compatibleNative.runtimeAccepted, true,
+  "Safe native layouts should remain switchable after a Codex host update.");
+assert.equal(compatibleNative.runtimeStatus, "COMPATIBLE_NATIVE");
+
+for (const unsafeFallback of [
+  { requestedLayoutMode: "compact" },
+  { geometryAudit: { status: "BLOCKED", failures: ["HORIZONTAL_OVERFLOW"] } },
+  { contrastAudit: { status: "BLOCKED", failures: ["LOW_CONTRAST"] } },
+  { sceneAudit: { status: "BLOCKED", errors: ["UNKNOWN_HOST_VERSION", "MISSING_SHELL"] } },
+  { visualAssetsRequested: true },
+]) {
+  const report = evaluateRuntimeAcceptance({ ...compatibleNative, ...unsafeFallback });
+  assert.equal(report.runtimeAccepted, false,
+    "Native compatibility must never hide layout, geometry, contrast, or scene failures.");
+}
+
+const missingAssetBinding = evaluateLiveVerification({
+  ...compatibleNative,
+  adapterStatus: "COMPLETE",
+  adapterReason: null,
+  sceneAudit: { status: "COMPLETE", errors: [] },
+  visualAssetsRequested: true,
+  assetAudit: { status: "BLOCKED", failures: ["BACKGROUND_ASSET_NOT_BOUND"] },
+});
+assert.equal(missingAssetBinding.pass, false);
+assert.ok(missingAssetBinding.verificationFailures.includes("VISUAL_ASSET_BINDING_FAILED"));
 
 const incompleteEvidenceMode = evaluateLiveVerification({
   installed: true,

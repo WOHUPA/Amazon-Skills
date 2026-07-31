@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Web.Script.Serialization;
 
@@ -81,6 +82,23 @@ namespace CodexThemeStudio.Desktop
             deletedSeriesIds.Remove(id);
             series.Add(new ThemeSeries { Id = id, Name = name.Trim(), Order = NextSeriesOrder() });
             Save();
+        }
+
+        public string CreateSeries(string name)
+        {
+            string normalizedName = (name ?? string.Empty).Trim();
+            if (normalizedName.Length == 0 || normalizedName.Length > 80)
+                throw new InvalidDataException("系列名称必须为 1-80 个字符。");
+            if (series.Any(item => string.Equals(item.Name, normalizedName, StringComparison.CurrentCultureIgnoreCase)))
+                throw new InvalidOperationException("已存在同名系列：" + normalizedName);
+
+            string id = CreateSeriesId(normalizedName);
+            string candidate = id;
+            int suffix = 2;
+            while (IsVirtual(candidate) || series.Any(item => item.Id == candidate))
+                candidate = id + "-" + suffix++;
+            CreateSeries(candidate, normalizedName);
+            return candidate;
         }
 
         public void RenameSeries(string id, string name)
@@ -225,6 +243,34 @@ namespace CodexThemeStudio.Desktop
                 throw new InvalidDataException("系列 ID 只能包含小写字母、数字和连字符。");
             if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 80)
                 throw new InvalidDataException("系列名称必须为 1-80 个字符。");
+        }
+
+        private static string CreateSeriesId(string name)
+        {
+            StringBuilder slug = new StringBuilder();
+            bool pendingSeparator = false;
+            foreach (char value in name.ToLowerInvariant())
+            {
+                bool asciiLetter = value >= 'a' && value <= 'z';
+                bool digit = value >= '0' && value <= '9';
+                if (asciiLetter || digit)
+                {
+                    if (pendingSeparator && slug.Length > 0) slug.Append('-');
+                    slug.Append(value);
+                    pendingSeparator = false;
+                }
+                else if (slug.Length > 0) pendingSeparator = true;
+            }
+            string readable = slug.ToString().Trim('-');
+            if (readable.Length > 0)
+                return readable.Length <= 60 ? readable : readable.Substring(0, 60).TrimEnd('-');
+
+            using (SHA256 sha = SHA256.Create())
+            {
+                string hash = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(name)))
+                    .Replace("-", string.Empty).ToLowerInvariant();
+                return "series-" + hash.Substring(0, 12);
+            }
         }
 
         private static void WriteAtomic(string path, string content)

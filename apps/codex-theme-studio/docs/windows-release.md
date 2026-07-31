@@ -54,7 +54,7 @@ Codex Theme Studio 2.7 继续以 WiX MSI 为 Windows 主安装包。MSI 使用�
 winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --accept-package-agreements
 
 .\scripts\build-windows-installer.ps1 `
-  -AppVersion 2.7.0 `
+  -AppVersion 2.7.2 `
   -GitHubRepository WOHUPA/Amazon-Skills `
   -UpdateReleaseTag codex-theme-studio-latest `
   -SignMode None
@@ -64,11 +64,11 @@ winget install --id JRSoftware.InnoSetup --exact --accept-source-agreements --ac
 
 ```powershell
 .\scripts\new-update-manifest.ps1 `
-  -Version 2.7.0 `
+  -Version 2.7.2 `
   -Repository WOHUPA/Amazon-Skills `
   -ReleaseTagPrefix codex-theme-studio-v `
-  -InstallerPath .\dist\Codex-Theme-Studio-2.7.0-Windows-x64.msi `
-  -BridgeInstallerPath .\dist\Codex-Theme-Studio-Setup-2.7.0.exe `
+  -InstallerPath .\dist\Codex-Theme-Studio-2.7.2-Windows-x64.msi `
+  -BridgeInstallerPath .\dist\Codex-Theme-Studio-Setup-2.7.2.exe `
   -SecretKeyPath <private-minisign-key>
 ```
 

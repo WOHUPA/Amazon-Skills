@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$AppVersion = '2.7.0',
+  [string]$AppVersion = '2.7.8',
   [string]$GitHubRepository = '',
   [string]$UpdateReleaseTag = 'latest',
   [string]$NodeVersion = '24.18.0',
@@ -22,6 +22,9 @@ $clientSource = Join-Path $root 'desktop\StudioClient.cs'
 $engineSource = Join-Path $root 'desktop\ThemeEngine.cs'
 $catalogSource = Join-Path $root 'desktop\ThemeCatalog.cs'
 $bundleSource = Join-Path $root 'desktop\BundleManager.cs'
+$recipeCompilerSource = Join-Path $root 'desktop\RecipeThemeCompiler.cs'
+$aiJobsSource = Join-Path $root 'desktop\AiThemeJobs.cs'
+$appServerSource = Join-Path $root 'desktop\CodexAppServerClient.cs'
 $supervisorSource = Join-Path $root 'desktop\RuntimeSupervisor.cs'
 $assetCacheSource = Join-Path $root 'desktop\RuntimeAssetCache.cs'
 $channelSource = Join-Path $root 'desktop\SingleInstanceChannel.cs'
@@ -42,7 +45,7 @@ $presentationFramework = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_M
 $windowsBase = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\WindowsBase' -Recurse -Filter WindowsBase.dll -ErrorAction Stop | Select-Object -First 1).FullName
 $systemXaml = (Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xaml' -Recurse -Filter System.Xaml.dll -ErrorAction Stop | Select-Object -First 1).FullName
 
-foreach ($required in @($launcherSource, $clientSource, $engineSource, $catalogSource, $bundleSource, $supervisorSource, $assetCacheSource, $channelSource, $updateSource, $updaterSource, $updatePublicKeyFile, $updatePublicKeysFile, $installerSource, $wixSource, $licenseRtf, $versionFile, $iconSource, $signScript,$csc,$presentationCore,$presentationFramework,$windowsBase,$systemXaml)) {
+foreach ($required in @($launcherSource, $clientSource, $engineSource, $catalogSource, $bundleSource, $recipeCompilerSource, $aiJobsSource, $appServerSource, $supervisorSource, $assetCacheSource, $channelSource, $updateSource, $updaterSource, $updatePublicKeyFile, $updatePublicKeysFile, $installerSource, $wixSource, $licenseRtf, $versionFile, $iconSource, $signScript,$csc,$presentationCore,$presentationFramework,$windowsBase,$systemXaml)) {
   if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
     throw "Windows installer build dependency is missing: $required"
   }
@@ -282,7 +285,7 @@ $compilerArgs = @(
   '/reference:System.Drawing.dll', "/reference:$systemXaml",
   "/reference:$windowsBase", "/reference:$presentationCore", "/reference:$presentationFramework",
   '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll',
-  $launcherSource, $clientSource, $engineSource, $catalogSource, $bundleSource, $supervisorSource, $assetCacheSource, $channelSource, $updateSource, $updateTrustSource
+  $launcherSource, $clientSource, $engineSource, $catalogSource, $bundleSource, $recipeCompilerSource, $aiJobsSource, $appServerSource, $supervisorSource, $assetCacheSource, $channelSource, $updateSource, $updateTrustSource
 )
 & $csc @compilerArgs
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $launcher -PathType Leaf)) {

@@ -40,7 +40,7 @@ namespace CodexThemeStudio.Desktop
 
     internal sealed class StudioClient : IDisposable
     {
-        private const string AppVersion = "2.7.0";
+        private const string AppVersion = "2.7.8";
         private const int ThemePageSize = 18;
         private readonly string stateRoot;
         private readonly string engineRoot;
@@ -48,6 +48,7 @@ namespace CodexThemeStudio.Desktop
         private readonly RuntimeSupervisor supervisor;
         private readonly RuntimeAssetCache assetCache;
         private readonly UpdateService updateService;
+        private readonly AiThemeJobs aiJobs;
         private readonly JavaScriptSerializer serializer = new JavaScriptSerializer();
         private readonly List<ThemeItem> themes = new List<ThemeItem>();
         private readonly Dictionary<string, BitmapSource> imageCache = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
@@ -70,13 +71,25 @@ namespace CodexThemeStudio.Desktop
         private Button maximizeButton;
         private Button closeButton;
         private Button themesNav;
+        private Button aiNav;
+        private Button editorNav;
+        private Button creatorNav;
         private Button runtimeNav;
         private Button settingsNav;
         private Grid themesPage;
+        private Grid aiPage;
+        private Grid editorPage;
+        private Grid creatorPage;
         private Grid runtimePage;
         private Grid settingsPage;
         private Button createThemeButton;
         private Button importThemeButton;
+        private Button recipeThemeButton;
+        private Button aiStartButton;
+        private TextBox aiPromptBox;
+        private TextBlock aiJobStatus;
+        private Button aiCompileCandidateButton;
+        private Button editorRecipeButton;
         private StackPanel seriesStrip;
         private Button newSeriesButton;
         private Button renameSeriesButton;
@@ -98,7 +111,7 @@ namespace CodexThemeStudio.Desktop
         private Button heroMoveButton;
         private TextBlock themeCountLabel;
         private ScrollViewer themeScroll;
-        private StackPanel themeStrip;
+        private WrapPanel themeStrip;
         private Button scrollLeftButton;
         private Button scrollRightButton;
         private Border activityDock;
@@ -120,6 +133,7 @@ namespace CodexThemeStudio.Desktop
         private TextBlock enginePath;
         private TextBlock updateStatus;
         private Button checkUpdateButton;
+        private TextBlock creatorThemeCount;
 
         public StudioClient(string stateRoot, string engineRoot)
         {
@@ -130,8 +144,10 @@ namespace CodexThemeStudio.Desktop
             assetCache = new RuntimeAssetCache(stateRoot);
             updateService = new UpdateService(stateRoot, engineRoot, AppVersion);
             serializer.MaxJsonLength = 16 * 1024 * 1024;
+            aiJobs = new AiThemeJobs(stateRoot, serializer);
             LoadWindow();
             BindControls();
+            NormalizePageHeaders();
             ConfigureWindow();
             progressTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Normal, UpdateProgress, window.Dispatcher);
             progressTimer.Stop();
@@ -166,22 +182,50 @@ namespace CodexThemeStudio.Desktop
         {
             titleBar = Find<Border>("TitleBar"); titleIcon = Find<Image>("TitleIcon");
             minimizeButton = Find<Button>("MinimizeButton"); maximizeButton = Find<Button>("MaximizeButton"); closeButton = Find<Button>("CloseButton");
-            themesNav = Find<Button>("ThemesNav"); runtimeNav = Find<Button>("RuntimeNav"); settingsNav = Find<Button>("SettingsNav");
-            themesPage = Find<Grid>("ThemesPage"); runtimePage = Find<Grid>("RuntimePage"); settingsPage = Find<Grid>("SettingsPage");
-            createThemeButton = Find<Button>("CreateThemeButton"); importThemeButton = Find<Button>("ImportThemeButton"); searchBox = Find<TextBox>("SearchBox"); searchHint = Find<TextBlock>("SearchHint");
+            themesNav = Find<Button>("ThemesNav"); aiNav = Find<Button>("AiNav"); editorNav = Find<Button>("EditorNav"); creatorNav = Find<Button>("CreatorNav"); runtimeNav = Find<Button>("RuntimeNav"); settingsNav = Find<Button>("SettingsNav");
+            themesPage = Find<Grid>("ThemesPage"); aiPage = Find<Grid>("AiPage"); editorPage = Find<Grid>("EditorPage"); creatorPage = Find<Grid>("CreatorPage"); runtimePage = Find<Grid>("RuntimePage"); settingsPage = Find<Grid>("SettingsPage");
+            createThemeButton = Find<Button>("CreateThemeButton"); importThemeButton = Find<Button>("ImportThemeButton"); recipeThemeButton = Find<Button>("RecipeThemeButton"); searchBox = Find<TextBox>("SearchBox"); searchHint = Find<TextBlock>("SearchHint");
+            aiStartButton = Find<Button>("AiStartButton"); aiPromptBox = Find<TextBox>("AiPromptBox"); aiJobStatus = Find<TextBlock>("AiJobStatus"); aiCompileCandidateButton = Find<Button>("AiCompileCandidateButton"); editorRecipeButton = Find<Button>("EditorRecipeButton"); creatorThemeCount = Find<TextBlock>("CreatorThemeCount");
             seriesStrip = Find<StackPanel>("SeriesStrip"); newSeriesButton = Find<Button>("NewSeriesButton"); renameSeriesButton = Find<Button>("RenameSeriesButton"); deleteSeriesButton = Find<Button>("DeleteSeriesButton");
             allFilter = Find<Button>("AllFilter"); darkFilter = Find<Button>("DarkFilter"); lightFilter = Find<Button>("LightFilter");
             heroContent = Find<Grid>("HeroContent"); heroImage = Find<Image>("HeroImage"); heroName = Find<TextBlock>("HeroName");
             heroMeta = Find<TextBlock>("HeroMeta"); heroDescription = Find<TextBlock>("HeroDescription"); heroApplyButton = Find<Button>("HeroApplyButton"); heroPreviewButton = Find<Button>("HeroPreviewButton");
             heroBackgroundButton = Find<Button>("HeroBackgroundButton"); heroDeleteButton = Find<Button>("HeroDeleteButton");
             heroMoveButton = Find<Button>("HeroMoveButton");
-            themeCountLabel = Find<TextBlock>("ThemeCountLabel"); themeScroll = Find<ScrollViewer>("ThemeScroll"); themeStrip = Find<StackPanel>("ThemeStrip");
+            themeCountLabel = Find<TextBlock>("ThemeCountLabel"); themeScroll = Find<ScrollViewer>("ThemeScroll"); themeStrip = Find<WrapPanel>("ThemeStrip");
             scrollLeftButton = Find<Button>("ScrollLeftButton"); scrollRightButton = Find<Button>("ScrollRightButton");
             activityDock = Find<Border>("ActivityDock"); busyBar = Find<ProgressBar>("BusyBar"); operationTitle = Find<TextBlock>("OperationTitle"); progressText = Find<TextBlock>("ProgressText"); cancelOperationButton = Find<Button>("CancelOperationButton");
             runtimeDot = Find<Ellipse>("RuntimeDot"); runtimeLabel = Find<TextBlock>("RuntimeLabel"); currentThemeValue = Find<TextBlock>("CurrentThemeValue"); runtimeModeValue = Find<TextBlock>("RuntimeModeValue"); runtimeDetailValue = Find<TextBlock>("RuntimeDetailValue");
             pauseButton = Find<Button>("PauseButton"); resumeButton = Find<Button>("ResumeButton"); runtimeVerifyButton = Find<Button>("RuntimeVerifyButton"); rollbackButton = Find<Button>("RollbackButton"); restoreButton = Find<Button>("RestoreButton");
             themeStorePath = Find<TextBlock>("ThemeStorePath"); enginePath = Find<TextBlock>("EnginePath");
             updateStatus = Find<TextBlock>("UpdateStatus"); checkUpdateButton = Find<Button>("CheckUpdateButton");
+        }
+
+        private void NormalizePageHeaders()
+        {
+            // Gold communicates a selected state or a primary action. Page titles are
+            // navigation context, so keeping them neutral prevents visual competition.
+            foreach (Grid page in new[] { themesPage, aiPage, editorPage, creatorPage, runtimePage, settingsPage })
+            {
+                TextBlock title = FindFirstTextBlock(page);
+                if (title == null) continue;
+                title.Foreground = Brush("#ECE8E1");
+                title.FontSize = 30;
+            }
+        }
+
+        private static TextBlock FindFirstTextBlock(DependencyObject root)
+        {
+            if (root == null) return null;
+            for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(root, index);
+                TextBlock text = child as TextBlock;
+                if (text != null) return text;
+                text = FindFirstTextBlock(child);
+                if (text != null) return text;
+            }
+            return null;
         }
 
         private void ConfigureWindow()
@@ -211,6 +255,9 @@ namespace CodexThemeStudio.Desktop
             heroContent.SizeChanged += delegate { ApplyRoundedClip(heroContent, 15); };
 
             themesNav.Click += delegate { ShowPage("themes"); };
+            aiNav.Click += delegate { ShowPage("ai"); };
+            editorNav.Click += delegate { ShowPage("editor"); };
+            creatorNav.Click += delegate { ShowPage("creator"); };
             runtimeNav.Click += delegate { ShowPage("runtime"); };
             settingsNav.Click += delegate { ShowPage("settings"); };
             searchBox.TextChanged += delegate
@@ -239,6 +286,10 @@ namespace CodexThemeStudio.Desktop
             heroMoveButton.Click += delegate { MoveSelectedTheme(); };
             createThemeButton.Click += delegate { OpenThemeGenerator(); };
             importThemeButton.Click += delegate { ImportThemeBundle(null); };
+            recipeThemeButton.Click += delegate { CompileRecipeTheme(); };
+            aiStartButton.Click += delegate { CreateAiThemeJob(); };
+            aiCompileCandidateButton.Click += delegate { CompileAiCandidate(); };
+            editorRecipeButton.Click += delegate { CompileRecipeTheme(); };
             newSeriesButton.Click += delegate { CreateSeries(); };
             renameSeriesButton.Click += delegate { RenameSeries(); };
             deleteSeriesButton.Click += delegate { DeleteSeries(); };
@@ -255,6 +306,7 @@ namespace CodexThemeStudio.Desktop
         {
             ApplyRoundedClip(heroContent, 15);
             LoadThemes();
+            RefreshAiJobStatus();
             RefreshSeries();
             RefreshState();
             themeStorePath.Text = Path.Combine(stateRoot, "themes");
@@ -356,6 +408,7 @@ namespace CodexThemeStudio.Desktop
                 }
                 catch { }
             }
+            if (creatorThemeCount != null) creatorThemeCount.Text = themes.Count.ToString();
             selectedTheme = themes.FirstOrDefault(delegate(ThemeItem item) { return string.Equals(item.Id, selectedId, StringComparison.Ordinal); });
         }
 
@@ -494,14 +547,11 @@ namespace CodexThemeStudio.Desktop
 
         private void CreateSeries()
         {
-            string id = ShowTextPrompt("新建系列", "系列 ID（小写字母、数字和连字符）", string.Empty);
-            if (string.IsNullOrWhiteSpace(id)) return;
-            string name = ShowTextPrompt("新建系列", "系列名称", id);
+            string name = ShowTextPrompt("新建系列", "系列名称（支持中文）", string.Empty);
             if (string.IsNullOrWhiteSpace(name)) return;
             try
             {
-                engine.Catalog.CreateSeries(id.Trim(), name.Trim());
-                selectedSeriesId = id.Trim();
+                selectedSeriesId = engine.Catalog.CreateSeries(name);
                 themePageStart = 0;
                 RefreshSeries();
                 RefreshCards();
@@ -627,10 +677,10 @@ namespace CodexThemeStudio.Desktop
 
         private Border CreateCard(ThemeItem item)
         {
-            Border card = new Border(); card.Width = 208; card.Height = 164; card.Margin = new Thickness(0, 0, 14, 0); card.CornerRadius = new CornerRadius(11); card.Cursor = Cursors.Hand;
+            Border card = new Border(); card.Width = 286; card.Height = 292; card.Margin = new Thickness(0, 0, 18, 18); card.CornerRadius = new CornerRadius(14); card.Cursor = Cursors.Hand;
             card.Background = Brush("#111318"); card.BorderThickness = new Thickness(selectedTheme != null && selectedTheme.Id == item.Id ? 2 : 1);
             card.BorderBrush = Brush(selectedTheme != null && selectedTheme.Id == item.Id ? "#D6AE78" : "#34312E");
-            Grid layout = new Grid(); layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(118) }); layout.RowDefinitions.Add(new RowDefinition());
+            Grid layout = new Grid(); layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(164) }); layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             layout.SizeChanged += delegate { ApplyRoundedClip(layout, 10); };
             Grid visual = new Grid(); Image image = new Image(); image.Stretch = Stretch.UniformToFill; visual.Children.Add(image);
             card.Loaded += async delegate
@@ -645,8 +695,12 @@ namespace CodexThemeStudio.Desktop
                 badge.Child = new TextBlock { Text = "当前", Foreground = Brush("#1A120A"), FontSize = 10, FontWeight = FontWeights.SemiBold }; visual.Children.Add(badge);
             }
             Grid.SetRow(visual, 0); layout.Children.Add(visual);
-            TextBlock title = new TextBlock { Text = item.Name, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Brush("#F0E1CE"), Margin = new Thickness(12, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
-            Grid.SetRow(title, 1); layout.Children.Add(title); card.Child = layout;
+            StackPanel detail = new StackPanel { Margin = new Thickness(14, 11, 14, 13) };
+            detail.Children.Add(new TextBlock { Text = item.Name, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = Brush("#F0E1CE"), TextTrimming = TextTrimming.CharacterEllipsis });
+            detail.Children.Add(new TextBlock { Text = (item.Layout == "native" ? "原生布局" : item.Layout) + " · " + (item.Appearance == "light" ? "浅色" : "深色"), FontSize = 11, Foreground = Brush("#9F9B94"), Margin = new Thickness(0, 5, 0, 8) });
+            Button apply = new Button { Content = item.Id == currentThemeId ? "正在使用" : "▷  应用主题", Style = (Style)window.FindResource(item.Id == currentThemeId ? "ActionButton" : "PrimaryButton"), Height = 34, IsEnabled = item.Id != currentThemeId && operationCancellation == null };
+            apply.Click += delegate(object sender, RoutedEventArgs e) { selectedTheme = item; e.Handled = true; RunAction("正在应用 " + item.Name, "activate", item.Id, "-RestartExisting"); };
+            detail.Children.Add(apply); Grid.SetRow(detail, 1); layout.Children.Add(detail); card.Child = layout;
             card.MouseLeftButtonUp += delegate { selectedTheme = item; SetHero(item); RefreshCards(); };
             return card;
         }
@@ -667,22 +721,29 @@ namespace CodexThemeStudio.Desktop
         private void ShowPage(string page)
         {
             themesPage.Visibility = page == "themes" ? Visibility.Visible : Visibility.Collapsed;
+            aiPage.Visibility = page == "ai" ? Visibility.Visible : Visibility.Collapsed;
+            editorPage.Visibility = page == "editor" ? Visibility.Visible : Visibility.Collapsed;
+            creatorPage.Visibility = page == "creator" ? Visibility.Visible : Visibility.Collapsed;
             runtimePage.Visibility = page == "runtime" ? Visibility.Visible : Visibility.Collapsed;
             settingsPage.Visibility = page == "settings" ? Visibility.Visible : Visibility.Collapsed;
-            SetNavStyle(themesNav, page == "themes"); SetNavStyle(runtimeNav, page == "runtime"); SetNavStyle(settingsNav, page == "settings");
+            SetNavStyle(themesNav, page == "themes"); SetNavStyle(aiNav, page == "ai"); SetNavStyle(editorNav, page == "editor"); SetNavStyle(creatorNav, page == "creator"); SetNavStyle(runtimeNav, page == "runtime"); SetNavStyle(settingsNav, page == "settings");
         }
 
         private static void SetNavStyle(Button button, bool active)
         {
-            button.Background = Brush(active ? "#181718" : "Transparent"); button.BorderBrush = Brush(active ? "#D6AE78" : "Transparent"); button.Foreground = Brush(active ? "#F1D5AE" : "#BDB5AB");
+            button.Background = Brush(active ? "#19191B" : "Transparent"); button.BorderBrush = Brush(active ? "#D6AE78" : "Transparent"); button.Foreground = Brush(active ? "#F0D4AB" : "#BDB5AB");
         }
 
         private void SetBusy(bool busy, string label)
         {
             activityDock.Visibility = busy ? Visibility.Visible : Visibility.Collapsed; operationTitle.Text = label;
-            foreach (Button button in new[] { importThemeButton, createThemeButton, heroApplyButton, heroBackgroundButton, heroMoveButton, heroDeleteButton, newSeriesButton, renameSeriesButton, deleteSeriesButton, pauseButton, resumeButton, runtimeVerifyButton, rollbackButton, restoreButton }) button.IsEnabled = !busy;
+            foreach (Button button in new[] { importThemeButton, recipeThemeButton, createThemeButton, aiStartButton, editorRecipeButton, heroApplyButton, heroBackgroundButton, heroMoveButton, heroDeleteButton, newSeriesButton, renameSeriesButton, deleteSeriesButton, pauseButton, resumeButton, runtimeVerifyButton, rollbackButton, restoreButton }) button.IsEnabled = !busy;
             if (busy) { busyBar.Value = 4; progressText.Text = " · 4%"; cancelOperationButton.IsEnabled = true; }
-            else { SetHero(selectedTheme); RefreshSeries(); }
+            else
+            {
+                try { RefreshSeries(); RefreshCards(); }
+                catch (Exception ex) { RecordClientFailure("busy-reset", string.Empty, null, ex); }
+            }
         }
 
         private void UpdateProgress(object sender, EventArgs e)
@@ -721,19 +782,53 @@ namespace CodexThemeStudio.Desktop
                 }
                 busyBar.Value = 100; progressText.Text = " · 100%";
                 string command = arguments != null && arguments.Length > 0 ? arguments[0] : string.Empty;
-                if (command == "set-background" || command == "delete") LoadThemes();
-                RefreshState();
+                if (command == "set-background" || command == "delete" || command == "create-recipe") LoadThemes();
+                try { RefreshState(); }
+                catch (Exception ex)
+                {
+                    RecordClientFailure("post-success-refresh", label, arguments, ex);
+                    string completed = string.Equals(command, "activate", StringComparison.OrdinalIgnoreCase)
+                        ? "主题已经切换成功，但 Studio 刷新界面时遇到问题。重新打开 Studio 即可同步当前状态。"
+                        : label + "已完成，但 Studio 刷新界面时遇到问题。重新打开 Studio 即可同步当前状态。";
+                    System.Windows.MessageBox.Show(completed + Environment.NewLine + Environment.NewLine + ex.Message, "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
                 if (command == "set-background") System.Windows.MessageBox.Show("本地背景已保存，并同时用于首页与任务页。", "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Information);
                 if (command == "delete") System.Windows.MessageBox.Show("主题已从主题库删除，并保留了本地可恢复备份。", "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (command == "create-recipe") System.Windows.MessageBox.Show("配方已编译到“AI 配方”系列。请先预览，再单独确认应用主题。", "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException) { }
-            catch (TimeoutException ex) { System.Windows.MessageBox.Show(ex.Message, "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Warning); }
-            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Error); }
+            catch (TimeoutException ex)
+            {
+                RecordClientFailure("operation-timeout", label, arguments, ex);
+                System.Windows.MessageBox.Show(ex.Message, "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                RecordClientFailure("operation-failed", label, arguments, ex);
+                System.Windows.MessageBox.Show(ex.Message, "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
             finally
             {
                 progressTimer.Stop();
                 if (operationCancellation != null) { operationCancellation.Dispose(); operationCancellation = null; }
                 SetBusy(false, string.Empty);
+            }
+        }
+
+        private void RecordClientFailure(string phase, string label, string[] arguments, Exception error)
+        {
+            try
+            {
+                string logDirectory = Path.Combine(stateRoot, "logs");
+                Directory.CreateDirectory(logDirectory);
+                string command = arguments != null && arguments.Length > 0 ? arguments[0] : string.Empty;
+                string message = (error == null ? string.Empty : error.ToString()).Replace("\r", " ").Replace("\n", " ");
+                string entry = DateTimeOffset.Now.ToString("o") + "\t" + phase + "\t" + command + "\t" + label + "\t" + message + Environment.NewLine;
+                File.AppendAllText(Path.Combine(logDirectory, "studio-client.log"), entry, new UTF8Encoding(false));
+            }
+            catch
+            {
+                // NOTE: Diagnostic logging must never turn a recoverable UI refresh problem into an operation failure.
             }
         }
 
@@ -861,6 +956,116 @@ namespace CodexThemeStudio.Desktop
                 System.Windows.MessageBox.Show("已打开 Codex 并复制主题生成提示词。生成后先导入，再单独确认激活。", "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "Codex Theme Studio", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private void CreateAiThemeJob()
+        {
+            try
+            {
+                AiThemeJob job = aiJobs.Create(aiPromptBox.Text);
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    try
+                    {
+                        using (CodexAppServerClient server = new CodexAppServerClient())
+                        {
+                            server.Connect();
+                            Dictionary<string, object> started = server.Request("thread/start", new Dictionary<string, object> { { "cwd", aiJobs.JobDirectory(job.Id) }, { "approvalPolicy", "never" }, { "sandbox", "workspace-write" } }, 30000);
+                            Dictionary<string, object> thread = started.ContainsKey("thread") ? started["thread"] as Dictionary<string, object> : null;
+                            if (thread == null || !thread.ContainsKey("id")) throw new InvalidDataException("Codex app-server 未返回 thread ID。" );
+                            string threadId = Convert.ToString(thread["id"]); aiJobs.SetThread(job.Id, threadId);
+                            string savedImage = null; string agentText = null; ManualResetEvent completed = new ManualResetEvent(false);
+                            server.Notification += delegate(string method, Dictionary<string, object> parameters)
+                            {
+                                if (method == "item/completed" && parameters.ContainsKey("item"))
+                                {
+                                    Dictionary<string, object> item = parameters["item"] as Dictionary<string, object>;
+                                    if (item != null && string.Equals(Convert.ToString(item.ContainsKey("type") ? item["type"] : ""), "imageGeneration", StringComparison.Ordinal) && item.ContainsKey("savedPath")) savedImage = Convert.ToString(item["savedPath"]);
+                                    if (item != null && string.Equals(Convert.ToString(item.ContainsKey("type") ? item["type"] : ""), "agentMessage", StringComparison.Ordinal) && item.ContainsKey("text")) agentText = Convert.ToString(item["text"]);
+                                }
+                                if (method == "turn/completed") completed.Set();
+                            };
+                            string imagePrompt = "Mode: generate-image. Generate exactly ONE 1600x900 or larger pure background artwork for Codex Theme Studio. Original request: " + job.Prompt + "\nDo not include text, logos, watermarks, UI, windows, panels, code, terminal, or mockups. Keep calm negative space for the real interface.";
+                            server.Request("turn/start", new Dictionary<string, object> { { "threadId", threadId }, { "input", new object[] { new Dictionary<string, object> { { "type", "text" }, { "text", imagePrompt }, { "text_elements", new object[0] } } } } }, 30000);
+                            if (!completed.WaitOne(TimeSpan.FromMinutes(4))) throw new TimeoutException("候选图生成超时。" );
+                            if (string.IsNullOrWhiteSpace(savedImage)) throw new InvalidDataException("Codex 未返回候选主图。" );
+                            string managedImage = aiJobs.AddGeneratedImage(job.Id, savedImage);
+                            completed.Reset(); agentText = null;
+                            string recipePrompt = "Mode: use-reference-image. Using the provided image, return ONLY a valid Theme Recipe v1 JSON object. Required top-level keys: schemaVersion=1, name, layout, appearance:{density}, paletteIntent:{appearance}. layout must be one of dream-banner, split-studio, full-canvas, terminal-grid, paper-board, minimal-focus, retro-messenger, silk-scroll. No markdown, no commentary. Name and visual choices must reflect: " + job.Prompt;
+                            server.Request("turn/start", new Dictionary<string, object> { { "threadId", threadId }, { "input", new object[] { new Dictionary<string, object> { { "type", "text" }, { "text", recipePrompt }, { "text_elements", new object[0] } }, new Dictionary<string, object> { { "type", "localImage" }, { "path", managedImage } } } } }, 30000);
+                            if (!completed.WaitOne(TimeSpan.FromMinutes(2))) throw new TimeoutException("主题配方生成超时。" );
+                            string recipeJson = ExtractJsonObject(agentText);
+                            if (string.IsNullOrWhiteSpace(recipeJson)) throw new InvalidDataException("Codex 未返回有效 Theme Recipe JSON。" );
+                            string recipePath = Path.Combine(aiJobs.JobDirectory(job.Id), "generated", "recipe-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + ".json");
+                            File.WriteAllText(recipePath, recipeJson + Environment.NewLine, new UTF8Encoding(false));
+                            aiJobs.AddCandidate(job.Id, recipePath, managedImage);
+                        }
+                        window.Dispatcher.BeginInvoke(new Action(RefreshAiJobStatus));
+                    }
+                    catch (Exception ex) { window.Dispatcher.BeginInvoke(new Action(delegate { aiJobStatus.Text = "app-server 连接失败：" + ex.Message; })); }
+                });
+                RefreshAiJobStatus();
+                System.Windows.MessageBox.Show("正在生成主题。完成后点击“一键导入主题库”即可安全写入本地主题库，仍不会自动应用。", "AI 生成主题", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "AI 生成主题", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private void CompileAiCandidate()
+        {
+            try
+            {
+                if (operationCancellation != null) return;
+                AiThemeJob job = aiJobs.Latest();
+                if (job == null) throw new InvalidOperationException("没有可编译的 AI 创作任务。" );
+                AiThemeRevision revision = aiJobs.CurrentCandidate(job.Id);
+                MessageBoxResult choice = System.Windows.MessageBox.Show("将把 AI 生成的候选版本 v" + revision.Number + " 校验并导入本地主题库。\n\n不会应用主题，也不会修改 Codex 官方文件。\n\n是否继续？", "确认导入主题", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                if (choice == MessageBoxResult.OK) RunAction("正在导入 AI 主题 v" + revision.Number, "create-recipe", revision.RecipePath, revision.ImagePath);
+            }
+            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "编译候选", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private void RefreshAiJobStatus()
+        {
+            AiThemeJob job = aiJobs.Latest();
+            if (job == null) { aiJobStatus.Text = "尚无本地创作任务。描述视觉方向后创建第一个任务。"; aiCompileCandidateButton.IsEnabled = false; return; }
+            int count = job.Revisions == null ? 0 : job.Revisions.Count;
+            int imageCount = job.GeneratedImagePaths == null ? 0 : job.GeneratedImagePaths.Count;
+            aiJobStatus.Text = "当前任务：" + job.Id + "\n状态：" + job.Stage + " · AI 候选图：" + imageCount + " · 配方版本：" + count + (count > 0 ? "（当前 v" + job.CurrentRevision + "）" : string.Empty);
+            aiCompileCandidateButton.IsEnabled = count > 0;
+        }
+
+        private static string ExtractJsonObject(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            int start = value.IndexOf('{'); int end = value.LastIndexOf('}');
+            return start >= 0 && end > start ? value.Substring(start, end - start + 1) : null;
+        }
+
+        private void CompileRecipeTheme()
+        {
+            if (operationCancellation != null) return;
+            Microsoft.Win32.OpenFileDialog recipeDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "选择 Theme Recipe v1 配方",
+                Filter = "Theme Recipe JSON (*.json)|*.json",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+            if (recipeDialog.ShowDialog(window) != true) return;
+            Microsoft.Win32.OpenFileDialog imageDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "选择主题主图",
+                Filter = "PNG 或 JPEG 图片|*.png;*.jpg;*.jpeg",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+            if (imageDialog.ShowDialog(window) != true) return;
+            MessageBoxResult choice = System.Windows.MessageBox.Show(
+                "将使用所选配方和主图创建一个新的本地 Theme Pack v2。\n\n不会应用主题，也不会修改 Codex 官方文件。\n\n是否继续？",
+                "编译主题配方",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information);
+            if (choice == MessageBoxResult.OK) RunAction("正在编译 Theme Recipe", "create-recipe", recipeDialog.FileName, imageDialog.FileName);
         }
 
         public void ShowAndActivate()

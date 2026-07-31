@@ -16,7 +16,7 @@ namespace CodexThemeStudio.Desktop
 {
     internal sealed class NativeThemeEngine : IDisposable
     {
-        private const string AppVersion = "2.7.0";
+        private const string AppVersion = "2.7.8";
         private const string CodexAppUserModelId = "OpenAI.Codex_2p2nqsd0c76g0!App";
         private readonly string stateRoot;
         private readonly string engineRoot;
@@ -25,6 +25,7 @@ namespace CodexThemeStudio.Desktop
         private readonly object processSync = new object();
         private readonly ThemeCatalog catalog;
         private readonly ThemeBundleManager bundleManager;
+        private readonly RecipeThemeCompiler recipeCompiler;
         private Process activeProcess;
 
         public NativeThemeEngine(string stateRoot, string engineRoot)
@@ -42,6 +43,7 @@ namespace CodexThemeStudio.Desktop
             InitializeThemeStore();
             catalog = new ThemeCatalog(this.stateRoot, Directory.GetDirectories(ThemesRoot).Select(Path.GetFileName));
             bundleManager = new ThemeBundleManager(this.stateRoot, ThemesRoot);
+            recipeCompiler = new RecipeThemeCompiler(this.engineRoot, ThemesRoot, serializer);
         }
 
         public bool IsPaused { get { return File.Exists(PauseFile); } }
@@ -192,6 +194,17 @@ namespace CodexThemeStudio.Desktop
             });
         }
 
+        private string CreateRecipeTheme(string recipePath, string imagePath)
+        {
+            RecipeCompilation created = recipeCompiler.Create(recipePath, imagePath);
+            catalog.AssignImported("ai-recipes", "AI 配方", new[] { created.Id });
+            return serializer.Serialize(new Dictionary<string, object> {
+                { "status", "COMPLETE" }, { "themeId", created.Id }, { "name", created.Name },
+                { "themeDir", created.ThemeDirectory }, { "layoutMappedToNative", created.LayoutMappedToNative },
+                { "activationStatus", "NOT_RUN" }
+            });
+        }
+
         private EngineCommandResult Execute(string[] arguments, CancellationToken cancellationToken, TimeSpan timeout)
         {
             bool acquired = false;
@@ -210,6 +223,7 @@ namespace CodexThemeStudio.Desktop
                 else if (command == "list") output = GetThemeListJson();
                 else if (command == "preview") output = Preview(value);
                 else if (command == "import") output = ImportBundle(value);
+                else if (command == "create-recipe") output = CreateRecipeTheme(value, arguments != null && arguments.Length > 2 ? arguments[2] : string.Empty);
                 else if (command == "activate") Activate(value, cancellationToken, timeout, allowRestart);
                 else if (command == "set-background") SetBackground(value, arguments != null && arguments.Length > 2 ? arguments[2] : string.Empty, cancellationToken, timeout, allowRestart);
                 else if (command == "delete") DeleteTheme(value);
@@ -685,6 +699,13 @@ namespace CodexThemeStudio.Desktop
             start.WindowStyle = ProcessWindowStyle.Hidden;
             start.RedirectStandardOutput = redirect;
             start.RedirectStandardError = redirect;
+            if (redirect)
+            {
+                // Node always emits UTF-8. Explicit decoding prevents Chinese
+                // theme names and validation messages from becoming mojibake.
+                start.StandardOutputEncoding = new UTF8Encoding(false, true);
+                start.StandardErrorEncoding = new UTF8Encoding(false, true);
+            }
             return start;
         }
 
@@ -1018,8 +1039,48 @@ namespace CodexThemeStudio.Desktop
         private static void ThrowIfFailed(EngineCommandResult result, string action)
         {
             if (result.ExitCode == 0) return;
-            string detail = (result.StandardError + Environment.NewLine + result.StandardOutput).Trim();
+            string detail = DescribeProcessFailure(result);
             throw new InvalidOperationException(action + (detail.Length == 0 ? "。" : "：" + detail));
+        }
+
+        private static string DescribeProcessFailure(EngineCommandResult result)
+        {
+            string error = (result.StandardError ?? string.Empty).Trim();
+            if (error.Length > 0) return LimitMessage(error);
+            string output = (result.StandardOutput ?? string.Empty).Trim();
+            if (output.Length == 0) return string.Empty;
+            try
+            {
+                JavaScriptSerializer parser = new JavaScriptSerializer { MaxJsonLength = 16 * 1024 * 1024 };
+                Dictionary<string, object> root = parser.DeserializeObject(output) as Dictionary<string, object>;
+                object[] targets = root != null && root.ContainsKey("targets") ? root["targets"] as object[] : null;
+                HashSet<string> details = new HashSet<string>(StringComparer.Ordinal);
+                if (targets != null)
+                {
+                    foreach (Dictionary<string, object> target in targets.OfType<Dictionary<string, object>>())
+                    {
+                        if (target.ContainsKey("error") && target["error"] != null)
+                            details.Add(Convert.ToString(target["error"]));
+                        Dictionary<string, object> verification = target.ContainsKey("result")
+                            ? target["result"] as Dictionary<string, object> : null;
+                        Array failures = verification != null && verification.ContainsKey("verificationFailures")
+                            ? verification["verificationFailures"] as Array : null;
+                        if (failures != null)
+                            foreach (object failure in failures) details.Add(Convert.ToString(failure));
+                    }
+                }
+                if (details.Count > 0)
+                    return "运行时校验未通过（" + string.Join("、", details.OrderBy(value => value, StringComparer.Ordinal)) + "）。";
+            }
+            catch (ArgumentException) { }
+            catch (InvalidOperationException) { }
+            return LimitMessage(output);
+        }
+
+        private static string LimitMessage(string value)
+        {
+            string normalized = value.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
+            return normalized.Length <= 600 ? normalized : normalized.Substring(0, 600) + "…";
         }
 
         private static string GetString(Dictionary<string, object> state, string key)

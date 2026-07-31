@@ -27,18 +27,40 @@ namespace CodexThemeStudio.Desktop
             {
                 WriteTheme(presetRoot, Path.Combine(engineRoot, "presets", "immersive-dark"), "immersive-dark");
                 WriteTheme(presetRoot, Path.Combine(engineRoot, "presets", "custom-theme"), "custom-theme");
-                string validImage = Path.Combine(root, "valid.png");
+                string validImage = Path.Combine(root, "中文背景.png");
                 string invalidImage = Path.Combine(root, "invalid.png");
+                string recipePath = Path.Combine(root, "recipe.json");
                 WriteImage(validImage, 1600, 900);
                 WriteImage(invalidImage, 320, 180);
+                File.WriteAllText(recipePath,
+                    "{\"schemaVersion\":1,\"name\":\"配方主题\",\"layout\":\"full-canvas\",\"appearance\":{\"density\":\"normal\"},\"paletteIntent\":{\"appearance\":\"dark\"}}",
+                    new UTF8Encoding(false));
+
+                System.Web.Script.Serialization.JavaScriptSerializer serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+                AiThemeJobs jobs = new AiThemeJobs(stateRoot, serializer);
+                AiThemeJob job = jobs.Create("深海月光，左侧留白，避免文字和 UI 元素。");
+                Assert(File.Exists(Path.Combine(jobs.JobDirectory(job.Id), "prompt.md")), "AI job prompt was not persisted.");
+                AiThemeRevision candidate = jobs.AddCandidate(job.Id, recipePath, validImage);
+                Assert(candidate.Number == 1, "First AI candidate revision must be v1.");
+                Assert(File.Exists(candidate.RecipePath) && File.Exists(candidate.ImagePath), "AI candidate artifacts were not copied into the managed job directory.");
+                Assert(jobs.CurrentCandidate(job.Id).Number == 1, "AI job current candidate was not persisted.");
 
                 using (NativeThemeEngine engine = new NativeThemeEngine(stateRoot, engineRoot))
                 {
+                    EngineCommandResult compiledRecipe = engine.ExecuteAsync(
+                        new[] { "create-recipe", recipePath, validImage },
+                        CancellationToken.None,
+                        TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+                    Assert(compiledRecipe.ExitCode == 0, "Recipe compilation failed: " + compiledRecipe.StandardError);
+                    Assert(compiledRecipe.StandardOutput.Contains("\"activationStatus\":\"NOT_RUN\""), "Recipe compilation must not activate a theme.");
+                    Assert(compiledRecipe.StandardOutput.Contains("\"layoutMappedToNative\":true"), "Unsupported recipe layouts must map to native.");
+
                     EngineCommandResult invalid = engine.ExecuteAsync(
                         new[] { "set-background", "custom-theme", invalidImage },
                         CancellationToken.None,
                         TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                     Assert(invalid.ExitCode != 0, "Small background must be rejected.");
+                    Assert(invalid.StandardError.Contains("至少为 1600×900"), "Background validation error must remain readable Chinese.");
 
                     EngineCommandResult updated = engine.ExecuteAsync(
                         new[] { "set-background", "custom-theme", validImage },
@@ -80,7 +102,7 @@ namespace CodexThemeStudio.Desktop
                     Assert(!Directory.Exists(Path.Combine(stateRoot, "themes", "custom-theme")), "Deleted bundled theme was restored on restart.");
                 }
 
-                Console.WriteLine("PASS: Local background transaction and recoverable theme deletion verified.");
+                Console.WriteLine("PASS: Local AI job persistence, background transaction, and recoverable theme deletion verified.");
             }
             catch (Exception ex)
             {

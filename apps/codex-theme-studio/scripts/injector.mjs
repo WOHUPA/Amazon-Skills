@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { readImageMetadata } from "./image-metadata.mjs";
 import {
   evaluateLiveVerification,
+  evaluateRuntimeAcceptance,
   loadHostAdapterRegistry,
   resolveHostAdapter,
   validateEvidenceDirectory,
@@ -17,7 +18,7 @@ const root = path.resolve(here, "..");
 const DEFAULT_THEME_DIR = path.join(root, "presets", "immersive-dark");
 const HOST_ADAPTERS_PATH = path.join(root, "assets", "host-adapters.json");
 const VISUAL_MATRIX_PATH = path.join(root, "references", "visual-regression-matrix.json");
-const SKIN_VERSION = "2.2.1";
+const SKIN_VERSION = "2.2.8";
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 const SOURCE_HEALTH_CHECK_MS = 30000;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
@@ -729,7 +730,7 @@ async function readThemeSourceStamp(loadedTheme) {
 async function probeSession(session) {
   return session.evaluate(`(() => {
     const markers = {
-      shell: Boolean(document.querySelector('main.main-surface')),
+      shell: Boolean(document.querySelector('main:is(.main-surface, [data-app-shell-main-surface])')),
       sidebar: Boolean(document.querySelector('aside.app-shell-left-panel')),
       composer: Boolean(document.querySelector('.composer-surface-chrome')),
       main: Boolean(document.querySelector('[data-app-shell-main-content-layout]')),
@@ -812,7 +813,7 @@ export function earlyPayloadFor(payload, revision) {
       if (window[generationKey] !== generation) { stop(); return true; }
       const root = document.documentElement;
       if (!root || !document.body) return false;
-      const shell = document.querySelector('main.main-surface');
+      const shell = document.querySelector('main:is(.main-surface, [data-app-shell-main-surface])');
       const sidebar = document.querySelector('aside.app-shell-left-panel');
       if (!shell || !sidebar) return false;
       stop();
@@ -1086,7 +1087,9 @@ async function verifySession(session) {
       sceneAudit: state.sceneAudit ?? { status: 'PARTIAL', errors: ['MISSING_SCENE_AUDIT'] },
       geometryAudit: state.geometryAudit ?? { status: 'PARTIAL', failures: ['MISSING_GEOMETRY_AUDIT'] },
       contrastAudit: state.contrastAudit ?? { status: 'PARTIAL', failures: ['MISSING_CONTRAST_AUDIT'] },
+      assetAudit: state.assetAudit ?? { status: 'PARTIAL', failures: ['MISSING_ASSET_AUDIT'] },
       stylesEvidence: state.stylesEvidence ?? { status: 'PARTIAL' },
+      visualAssetsRequested: state.visualAssetsRequested === true,
       requireSemanticEvidence: state.evidenceMode === true,
       stylePresent: Boolean(document.getElementById('codex-dream-skin-style')),
       chromePresent: Boolean(document.getElementById('codex-dream-skin-chrome')),
@@ -1098,7 +1101,7 @@ async function verifySession(session) {
   return evaluateLiveVerification(result);
 }
 
-async function waitForVerifiedSession(session, timeoutMs) {
+async function waitForVerifiedSession(session, timeoutMs, allowNativeCompatibility = false) {
   const deadline = Date.now() + timeoutMs;
   let lastResult;
   let lastError;
@@ -1106,7 +1109,13 @@ async function waitForVerifiedSession(session, timeoutMs) {
     try {
       lastResult = await verifySession(session);
       lastError = null;
-      if (lastResult.pass) return lastResult;
+      if (lastResult.pass) {
+        return allowNativeCompatibility ? evaluateRuntimeAcceptance(lastResult) : lastResult;
+      }
+      if (allowNativeCompatibility) {
+        const runtimeAcceptance = evaluateRuntimeAcceptance(lastResult);
+        if (runtimeAcceptance.runtimeAccepted) return runtimeAcceptance;
+      }
     } catch (error) {
       lastError = error;
     }
@@ -1275,13 +1284,17 @@ async function runOneShot(options) {
         const verified = options.mode === "remove" || options.mode === "verify-removed"
           ? await verifyRemovedSession(session)
           : (options.reload || options.mode === "once" || options.mode === "verify")
-            ? await waitForVerifiedSession(session, options.timeoutMs)
+            ? await waitForVerifiedSession(
+              session,
+              options.timeoutMs,
+              options.mode === "once",
+            )
             : await verifySession(session);
         results.push({ targetId: target.id, markers: probe.markers, result: verified });
         if (operationToken) {
           const passed = options.mode === "remove" || options.mode === "verify-removed"
             ? verified === true
-            : verified?.pass;
+            : options.mode === "once" ? verified?.runtimeAccepted : verified?.pass;
           await presentOperationUi(
             session,
             operationToken,
@@ -1324,7 +1337,9 @@ async function runOneShot(options) {
   console.log(JSON.stringify({ mode: options.mode, port: options.port, targets: results }, null, 2));
   const expectsRemoved = options.mode === "remove" || options.mode === "verify-removed";
   const failed = results.length === 0 || results.some((item) =>
-    item.error || (expectsRemoved ? item.result !== true : !item.result?.pass));
+    item.error || (expectsRemoved
+      ? item.result !== true
+      : options.mode === "once" ? !item.result?.runtimeAccepted : !item.result?.pass));
   if (failed) process.exitCode = 2;
 }
 

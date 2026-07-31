@@ -36,7 +36,7 @@ namespace CodexThemeStudio.Desktop
                     client.Window.Show();
                     client.Window.UpdateLayout();
                     timer.Stop();
-                    StackPanel strip = client.Window.FindName("ThemeStrip") as StackPanel;
+                    WrapPanel strip = client.Window.FindName("ThemeStrip") as WrapPanel;
                     TextBlock count = client.Window.FindName("ThemeCountLabel") as TextBlock;
                     if (strip == null || strip.Children.Count > 18)
                         throw new InvalidOperationException("Theme card virtualization did not cap the live visual tree.");

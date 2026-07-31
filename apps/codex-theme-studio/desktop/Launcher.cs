@@ -15,15 +15,15 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("Codex Theme Studio")]
 [assembly: AssemblyProduct("Codex Theme Studio")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("2.7.0.0")]
-[assembly: AssemblyFileVersion("2.7.0.0")]
-[assembly: AssemblyInformationalVersion("2.7.0")]
+[assembly: AssemblyVersion("2.7.8.0")]
+[assembly: AssemblyFileVersion("2.7.8.0")]
+[assembly: AssemblyInformationalVersion("2.7.8")]
 
 namespace CodexThemeStudio.Desktop
 {
     internal static class Program
     {
-        private const string AppVersion = "2.7.0";
+        private const string AppVersion = "2.7.8";
         private const string RuntimeResource = "CodexThemeStudio.Runtime.zip";
         private static readonly string StateRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -146,7 +146,7 @@ namespace CodexThemeStudio.Desktop
             bool confirmed = HasArgument(args, "--confirm");
             string normalized = command.Trim().ToLowerInvariant();
             string[] supportedCommands = {
-                "status", "list", "preview", "import", "activate", "rollback",
+                "status", "list", "preview", "import", "create-recipe", "activate", "rollback",
                 "pause", "resume", "verify", "restore"
             };
             if (!supportedCommands.Contains(normalized))
@@ -159,7 +159,7 @@ namespace CodexThemeStudio.Desktop
                 WriteEngineResult(resultPath, unsupported);
                 return unsupported.ExitCode;
             }
-            string[] writeCommands = { "import", "activate", "rollback", "pause", "resume", "restore" };
+            string[] writeCommands = { "import", "create-recipe", "activate", "rollback", "pause", "resume", "restore" };
             if (writeCommands.Contains(normalized) && !confirmed)
             {
                 EngineCommandResult denied = new EngineCommandResult {
@@ -179,6 +179,8 @@ namespace CodexThemeStudio.Desktop
                 engineArguments = new[] { normalized, !string.IsNullOrWhiteSpace(packagePath) ? packagePath : themeId };
             else if (normalized == "import")
                 engineArguments = new[] { normalized, packagePath };
+            else if (normalized == "create-recipe")
+                engineArguments = new[] { normalized, GetArgumentValue(args, "--recipe"), GetArgumentValue(args, "--image") };
             else if (confirmed && (normalized == "resume" || normalized == "rollback"))
                 engineArguments = new[] { normalized, "-RestartExisting" };
             else engineArguments = new[] { normalized };
