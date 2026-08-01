@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "codexVersion": "26.715.8383.0",
-  "componentBuild": "26.715.61943",
+  "codexVersion": "26.727.4816.0",
+  "componentBuild": "index-ChJf0nR3",
   "scene": "task",
   "composerState": "streaming",
   "viewport": {
@@ -10,7 +10,8 @@
   },
   "selectorMatches": {
     "html[data-codex-window-type=\"electron\"]": ["window"],
-    "main.main-surface": ["shell"],
+    "main.main-surface": [],
+    "[data-app-shell-main-surface]": ["shell"],
     "aside.app-shell-left-panel": ["sidebar"],
     "[data-app-action-sidebar-scroll]": ["sidebar-scroll"],
     "[data-app-shell-main-content-layout]": ["main-layout"],

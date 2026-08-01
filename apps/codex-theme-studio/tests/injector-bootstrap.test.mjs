@@ -20,7 +20,9 @@ function createFixture() {
       documentElement: {},
       body: {},
       querySelector(selector) {
-        if (selector === "main.main-surface") return markers.shell ? {} : null;
+        if (selector === "main:is(.main-surface, [data-app-shell-main-surface])") {
+          return markers.shell ? {} : null;
+        }
         if (selector === "aside.app-shell-left-panel") return markers.sidebar ? {} : null;
         return null;
       },
@@ -78,5 +80,7 @@ assert.match(source, /if \(!fallbackTargets\.get\(id\)\) return;/,
   "Fallback listeners must stay inert after a successful early registration.");
 assert.match(source, /Page\.removeScriptToEvaluateOnNewDocument/,
   "Watcher shutdown and theme refresh must unregister persistent Page scripts.");
+assert.match(source, /main:is\(\.main-surface, \[data-app-shell-main-surface\]\)/,
+  "Shell probing must accept the stable 26.727 main-surface attribute.");
 
 console.log("PASS: Windows early injection is shell-guarded, generation-safe, ordered before probing, and fallback-scoped.");

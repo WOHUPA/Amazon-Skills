@@ -1,10 +1,12 @@
 import fs from "node:fs/promises";
+import { watch as watchFiles } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readImageMetadata } from "./image-metadata.mjs";
 import {
   evaluateLiveVerification,
+  evaluateRuntimeAcceptance,
   loadHostAdapterRegistry,
   resolveHostAdapter,
   validateEvidenceDirectory,
@@ -16,9 +18,9 @@ const root = path.resolve(here, "..");
 const DEFAULT_THEME_DIR = path.join(root, "presets", "immersive-dark");
 const HOST_ADAPTERS_PATH = path.join(root, "assets", "host-adapters.json");
 const VISUAL_MATRIX_PATH = path.join(root, "references", "visual-regression-matrix.json");
-const SKIN_VERSION = "2.2.1";
+const SKIN_VERSION = "2.2.8";
 const MAX_ART_BYTES = 16 * 1024 * 1024;
-const STRONG_THEME_AUDIT_MS = 30000;
+const SOURCE_HEALTH_CHECK_MS = 30000;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const BROWSER_ID_PATTERN = /^[A-Za-z0-9._-]{1,200}$/;
 const OPERATION_UI_HOST_ID = "chatgpt-dream-skin-operation";
@@ -372,6 +374,23 @@ class BrowserIdentityAnchor {
   constructor(url) {
     this.ws = new WebSocket(url);
     this.closed = false;
+    this.nextId = 1;
+    this.pending = new Map();
+    this.listeners = new Map();
+    this.ws.addEventListener("message", (event) => {
+      const message = parseCdpMessage(event.data);
+      if (!message) return this.close();
+      if (message.id) {
+        const waiter = this.pending.get(message.id);
+        if (!waiter) return;
+        clearTimeout(waiter.timeout);
+        this.pending.delete(message.id);
+        if (message.error) waiter.reject(new Error(message.error.message));
+        else waiter.resolve(message.result);
+        return;
+      }
+      for (const listener of this.listeners.get(message.method) ?? []) listener(message.params ?? {});
+    });
     this.ws.addEventListener("close", () => { this.closed = true; });
     this.ws.addEventListener("error", () => {
       this.closed = true;
@@ -396,10 +415,35 @@ class BrowserIdentityAnchor {
       }, { once: true });
     });
     if (this.closed) throw new Error("CDP browser identity WebSocket is already closed");
+    await this.send("Target.setDiscoverTargets", { discover: true });
     return this;
   }
 
+  on(method, listener) {
+    const listeners = this.listeners.get(method) ?? [];
+    listeners.push(listener);
+    this.listeners.set(method, listeners);
+  }
+
+  send(method, params = {}) {
+    if (this.closed) return Promise.reject(new Error("CDP browser identity socket is closed"));
+    return new Promise((resolve, reject) => {
+      const id = this.nextId++;
+      const timeout = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`CDP browser command timed out: ${method}`));
+      }, 10000);
+      this.pending.set(id, { resolve, reject, timeout });
+      this.ws.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
   close() {
+    for (const waiter of this.pending.values()) {
+      clearTimeout(waiter.timeout);
+      waiter.reject(new Error("CDP browser identity socket closed"));
+    }
+    this.pending.clear();
     if (!this.closed) {
       try { this.ws.close(); } catch {}
     }
@@ -651,9 +695,13 @@ async function loadPayload(themeDir = DEFAULT_THEME_DIR, candidateTheme = null, 
     sceneStateRequirements: visualMatrix.sceneStateRequirements ?? {},
     evidenceMode: Boolean(options.evidenceDir),
   };
+  const assets = loadedTheme.assetData;
+  const artExpression = assets.homeBackground && assets.homeBackground === assets.taskBackground
+    ? `(() => { const sharedBackground = ${JSON.stringify(assets.homeBackground)}; return { homeBackground: sharedBackground, taskBackground: sharedBackground, icons: ${JSON.stringify(assets.icons)} }; })()`
+    : JSON.stringify(assets);
   const payload = template
     .replace("__DREAM_CSS_JSON__", JSON.stringify(css))
-    .replace("__DREAM_ART_JSON__", JSON.stringify(loadedTheme.assetData))
+    .replace("__DREAM_ART_JSON__", artExpression)
     .replace("__DREAM_THEME_JSON__", JSON.stringify(loadedTheme.theme))
     .replace("__DREAM_RUNTIME_JSON__", JSON.stringify(runtimeContext));
   const { imageBytes: _imageBytes, assetData: _assetData, ...themeState } = loadedTheme;
@@ -682,7 +730,7 @@ async function readThemeSourceStamp(loadedTheme) {
 async function probeSession(session) {
   return session.evaluate(`(() => {
     const markers = {
-      shell: Boolean(document.querySelector('main.main-surface')),
+      shell: Boolean(document.querySelector('main:is(.main-surface, [data-app-shell-main-surface])')),
       sidebar: Boolean(document.querySelector('aside.app-shell-left-panel')),
       composer: Boolean(document.querySelector('.composer-surface-chrome')),
       main: Boolean(document.querySelector('[data-app-shell-main-content-layout]')),
@@ -765,7 +813,7 @@ export function earlyPayloadFor(payload, revision) {
       if (window[generationKey] !== generation) { stop(); return true; }
       const root = document.documentElement;
       if (!root || !document.body) return false;
-      const shell = document.querySelector('main.main-surface');
+      const shell = document.querySelector('main:is(.main-surface, [data-app-shell-main-surface])');
       const sidebar = document.querySelector('aside.app-shell-left-panel');
       if (!shell || !sidebar) return false;
       stop();
@@ -1018,6 +1066,7 @@ async function verifyRemovedSession(session) {
 async function verifySession(session) {
   const result = await session.evaluate(`(() => {
     const state = window.__CODEX_DREAM_SKIN_STATE__ ?? {};
+    state.ensure?.(true);
     const version = state.version ?? null;
     return {
       installed: document.documentElement.classList.contains('codex-dream-skin'),
@@ -1038,7 +1087,9 @@ async function verifySession(session) {
       sceneAudit: state.sceneAudit ?? { status: 'PARTIAL', errors: ['MISSING_SCENE_AUDIT'] },
       geometryAudit: state.geometryAudit ?? { status: 'PARTIAL', failures: ['MISSING_GEOMETRY_AUDIT'] },
       contrastAudit: state.contrastAudit ?? { status: 'PARTIAL', failures: ['MISSING_CONTRAST_AUDIT'] },
+      assetAudit: state.assetAudit ?? { status: 'PARTIAL', failures: ['MISSING_ASSET_AUDIT'] },
       stylesEvidence: state.stylesEvidence ?? { status: 'PARTIAL' },
+      visualAssetsRequested: state.visualAssetsRequested === true,
       requireSemanticEvidence: state.evidenceMode === true,
       stylePresent: Boolean(document.getElementById('codex-dream-skin-style')),
       chromePresent: Boolean(document.getElementById('codex-dream-skin-chrome')),
@@ -1050,7 +1101,7 @@ async function verifySession(session) {
   return evaluateLiveVerification(result);
 }
 
-async function waitForVerifiedSession(session, timeoutMs) {
+async function waitForVerifiedSession(session, timeoutMs, allowNativeCompatibility = false) {
   const deadline = Date.now() + timeoutMs;
   let lastResult;
   let lastError;
@@ -1058,7 +1109,13 @@ async function waitForVerifiedSession(session, timeoutMs) {
     try {
       lastResult = await verifySession(session);
       lastError = null;
-      if (lastResult.pass) return lastResult;
+      if (lastResult.pass) {
+        return allowNativeCompatibility ? evaluateRuntimeAcceptance(lastResult) : lastResult;
+      }
+      if (allowNativeCompatibility) {
+        const runtimeAcceptance = evaluateRuntimeAcceptance(lastResult);
+        if (runtimeAcceptance.runtimeAccepted) return runtimeAcceptance;
+      }
     } catch (error) {
       lastError = error;
     }
@@ -1227,13 +1284,17 @@ async function runOneShot(options) {
         const verified = options.mode === "remove" || options.mode === "verify-removed"
           ? await verifyRemovedSession(session)
           : (options.reload || options.mode === "once" || options.mode === "verify")
-            ? await waitForVerifiedSession(session, options.timeoutMs)
+            ? await waitForVerifiedSession(
+              session,
+              options.timeoutMs,
+              options.mode === "once",
+            )
             : await verifySession(session);
         results.push({ targetId: target.id, markers: probe.markers, result: verified });
         if (operationToken) {
           const passed = options.mode === "remove" || options.mode === "verify-removed"
             ? verified === true
-            : verified?.pass;
+            : options.mode === "once" ? verified?.runtimeAccepted : verified?.pass;
           await presentOperationUi(
             session,
             operationToken,
@@ -1276,7 +1337,9 @@ async function runOneShot(options) {
   console.log(JSON.stringify({ mode: options.mode, port: options.port, targets: results }, null, 2));
   const expectsRemoved = options.mode === "remove" || options.mode === "verify-removed";
   const failed = results.length === 0 || results.some((item) =>
-    item.error || (expectsRemoved ? item.result !== true : !item.result?.pass));
+    item.error || (expectsRemoved
+      ? item.result !== true
+      : options.mode === "once" ? !item.result?.runtimeAccepted : !item.result?.pass));
   if (failed) process.exitCode = 2;
 }
 
@@ -1291,9 +1354,20 @@ async function runWatch(options) {
   let listFailures = 0;
   let lastListErrorLogAt = 0;
   let lastThemeErrorLogAt = 0;
-  let lastStrongThemeAuditAt = 0;
+  let lastSourceHealthCheckAt = 0;
   let loadedPayload = null;
   let paused = false;
+  let targetsDirty = true;
+  let themeDirty = false;
+  let lastTargetHealthCheckAt = 0;
+  const themeWatcher = watchFiles(options.themeDir, { recursive: true }, () => { themeDirty = true; });
+  themeWatcher.on("error", (error) => {
+    themeDirty = true;
+    console.error(`[dream-skin] theme file watcher error: ${error.message}`);
+  });
+  for (const eventName of ["Target.targetCreated", "Target.targetDestroyed", "Target.targetInfoChanged"]) {
+    identityAnchor.on(eventName, () => { targetsDirty = true; });
+  }
   const stop = () => { stopping = true; };
   const rejectTarget = (target, baseDelayMs, error = null) => {
     const previous = targetFailures.get(target.id) ?? { failures: 0, lastLogAt: 0 };
@@ -1328,7 +1402,7 @@ async function runWatch(options) {
 
   try {
     loadedPayload = await loadPayload(options.themeDir, null, options);
-    lastStrongThemeAuditAt = Date.now();
+    lastSourceHealthCheckAt = Date.now();
     paused = await fileExists(options.pauseFile);
     while (!stopping) {
       if (identityAnchor.closed) {
@@ -1337,36 +1411,44 @@ async function runWatch(options) {
         break;
       }
       let targets = [];
-      try {
-        targets = await listAppTargets(options.port);
-        listFailures = 0;
-      } catch (error) {
-        listFailures += 1;
-        const retryMs = Math.min(10000, 1000 * (2 ** Math.min(listFailures - 1, 4)));
-        if (listFailures === 1 || Date.now() - lastListErrorLogAt >= 30000) {
-          console.error(`[dream-skin] ${new Date().toISOString()} ${error.message}; retrying in ${retryMs}ms`);
-          lastListErrorLogAt = Date.now();
+      const now = Date.now();
+      if (targetsDirty || now - lastTargetHealthCheckAt >= SOURCE_HEALTH_CHECK_MS) {
+        try {
+          targets = await listAppTargets(options.port);
+          targetsDirty = false;
+          lastTargetHealthCheckAt = now;
+          listFailures = 0;
+        } catch (error) {
+          listFailures += 1;
+          const retryMs = Math.min(10000, 1000 * (2 ** Math.min(listFailures - 1, 4)));
+          if (listFailures === 1 || Date.now() - lastListErrorLogAt >= 30000) {
+            console.error(`[dream-skin] ${new Date().toISOString()} ${error.message}; retrying in ${retryMs}ms`);
+            lastListErrorLogAt = Date.now();
+          }
+          await new Promise((resolve) => setTimeout(resolve, retryMs));
+          continue;
         }
-        await new Promise((resolve) => setTimeout(resolve, retryMs));
-        continue;
+      } else {
+        targets = [...sessions.keys()].map((id) => ({ id }));
       }
 
       const nextPaused = await fileExists(options.pauseFile);
       let nextPayload = loadedPayload;
       if (!nextPaused) {
         try {
-          const now = Date.now();
-          let shouldAudit = !loadedPayload || now - lastStrongThemeAuditAt >= STRONG_THEME_AUDIT_MS;
-          if (!shouldAudit) {
+          const checkTime = Date.now();
+          let shouldAudit = !loadedPayload;
+          if (!shouldAudit && (themeDirty || checkTime - lastSourceHealthCheckAt >= SOURCE_HEALTH_CHECK_MS)) {
+            lastSourceHealthCheckAt = checkTime;
             try {
               shouldAudit = await readThemeSourceStamp(loadedPayload) !== loadedPayload.sourceStamp;
+              themeDirty = false;
             } catch {
               shouldAudit = true;
             }
           }
           if (shouldAudit) {
             const candidateTheme = await loadTheme(options.themeDir);
-            lastStrongThemeAuditAt = now;
             if (!loadedPayload || candidateTheme.fingerprint !== loadedPayload.fingerprint) {
               nextPayload = await loadPayload(options.themeDir, candidateTheme, options);
             } else {
@@ -1501,9 +1583,10 @@ async function runWatch(options) {
           rejectTarget(target, 2500, error);
         }
       }
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await new Promise((resolve) => setTimeout(resolve, targetsDirty ? 120 : 750));
     }
   } finally {
+    themeWatcher.close();
     identityAnchor.close();
     for (const [id, session] of sessions) {
       await removeEarlyPayload(session, earlyScripts.get(id));

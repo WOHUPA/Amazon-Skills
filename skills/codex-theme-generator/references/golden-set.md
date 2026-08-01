@@ -4,6 +4,7 @@
 
 - `生成一套深色 Codex 主题，背景、图标、菜单和输入区要配套。` → 触发生成器，输出并静态验证 Theme Pack v2。
 - `做一套可以分别切换的深浅双主题。` → 使用 `--pair`，生成两个独立 ID。
+- `生成斗破系列主题并给我一个可一键导入的文件。` → 同时确认主题目录、`.codextheme` 路径和系列信息，生成一个 Bundle。
 - `用黑金模板做 cinematic 布局。` → 先要求精确 Codex 版本，只读检测独立 Studio；缺少受信任 `COMPLETE` 矩阵时返回 `BLOCKED`。
 
 ## 反例
@@ -24,4 +25,5 @@
 - `tool/codex-theme-studio` 不存在于 Generator 源码；安装、更新和运行时测试不属于 Generator。
 - 默认布局为 `native/240/920/0/comfortable`；实验布局只读查询已安装 Studio 的受信任矩阵。
 - 生成结果必须显式报告 `importStatus=NOT_RUN` 与 `activationStatus=NOT_RUN`。
+- Bundle 目标存在、任一主题写入失败或打包失败时，主题目录与 Bundle 必须一起回滚。
 - 颜色、对比度、图片尺寸、结构计数和原生载荷由脚本计算，不允许模型手算。

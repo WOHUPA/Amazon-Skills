@@ -1,5 +1,12 @@
 # Patch Log
 
+## [2026-07-25] v2.7.0
+
+- 新增 `.codextheme` Bundle v1 原子交付，单主题和深浅双主题可打成一个纯数据包。
+- 新增 `--bundle-output/--series-id/--series-name`，主题目录与 Bundle 任一冲突都会阻断并回滚。
+- 默认同时确认主题目录和 Bundle 文件目标，输出新增 `bundlePath/bundleStatus`，导入与激活仍固定为 `NOT_RUN`。
+- Studio 只读检测改为原生 `CodexThemeStudio.exe`，不再依赖未随客户端安装的 PowerShell CLI。
+
 ## [2026-07-21] v2.3.0
 
 - 将 Generator 收敛为 Theme Pack v2 构建与静态验证入口，移除 Studio 安装、更新、导入、激活和运行时验证职责。

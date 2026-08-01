@@ -2,7 +2,7 @@
 
 A Windows runtime for pure-data Theme Pack v2 packages. It applies backgrounds, semantic icons, palette, materials, and versioned allowlisted layouts over validated loopback CDP without modifying WindowsApps, `app.asar`, signatures, or authentication data. Version 2.2 fails closed: only `COMPLETE` is publishable, unknown hosts fall back to native geometry with `BLOCKED`, and missing visual evidence is `PARTIAL`.
 
-Use `scripts/theme-studio.ps1` with `list`, `preview`, `import`, `activate`, `rollback`, `pause`, `resume`, `verify`, `restore`, `install`, or `update`. Runtime state lives below `%LOCALAPPDATA%\CodexThemeStudio`.
+Use the installed `CodexThemeStudio.exe --engine <action>` interface with `--package`, `--theme`, `--confirm`, and `--result-file`. Theme Bundle v1 files use the `.codextheme` extension; imports are atomic and never auto-activate. Runtime state, Catalog v1, backups, and private thumbnails live below `%LOCALAPPDATA%\CodexThemeStudio`.
 
 Windows releases use a WiX MSI with a transactional helper updater. A temporary Inno Setup EXE bridge remains available for upgrades from the 2.5.x install line. Update artifacts require SHA-256 and Minisign verification before Windows Installer is started.
 

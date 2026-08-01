@@ -167,10 +167,53 @@ export function evaluateLiveVerification(result) {
   if (result?.sceneAudit?.status !== COMPLETE) failures.push("SCENE_CONTRACT_FAILED");
   if (result?.geometryAudit?.status !== COMPLETE) failures.push("GEOMETRY_CONTRACT_FAILED");
   if (result?.contrastAudit?.status && result.contrastAudit.status !== COMPLETE) failures.push("CONTRAST_CONTRACT_FAILED");
+  if (result?.visualAssetsRequested && result?.assetAudit?.status !== COMPLETE) {
+    failures.push("VISUAL_ASSET_BINDING_FAILED");
+  }
   if (result?.requireSemanticEvidence && result?.stylesEvidence?.status !== COMPLETE) {
     failures.push("SEMANTIC_STATE_EVIDENCE_INCOMPLETE");
   }
   return { ...result, pass: failures.length === 0, verificationFailures: failures };
+}
+
+export function evaluateRuntimeAcceptance(result) {
+  const strict = evaluateLiveVerification(result);
+  if (strict.pass) {
+    return {
+      ...strict,
+      runtimeAccepted: true,
+      runtimeStatus: COMPLETE,
+      runtimeAcceptanceReason: null,
+    };
+  }
+
+  const sceneErrors = Array.isArray(strict?.sceneAudit?.errors)
+    ? strict.sceneAudit.errors : [];
+  const compatibleNative = strict?.installed === true
+    && strict?.versionMatches === true
+    && strict?.stylePresent === true
+    && strict?.chromePresent === true
+    && strict?.chromePointerEvents === "none"
+    && strict?.requestedLayoutMode === "native"
+    && strict?.layoutMode === "native"
+    && strict?.adapterStatus === BLOCKED
+    && strict?.adapterReason === "UNKNOWN_HOST_VERSION"
+    && strict?.sceneAudit?.status === BLOCKED
+    && sceneErrors.length === 1
+    && sceneErrors[0] === "UNKNOWN_HOST_VERSION"
+    && strict?.geometryAudit?.status === COMPLETE
+    && strict?.contrastAudit?.status === COMPLETE
+    && strict?.visualAssetsRequested !== true
+    && strict?.requireSemanticEvidence !== true
+    && strict.verificationFailures.every((failure) =>
+      failure === "ADAPTER_BLOCKED" || failure === "SCENE_CONTRACT_FAILED");
+
+  return {
+    ...strict,
+    runtimeAccepted: compatibleNative,
+    runtimeStatus: compatibleNative ? "COMPATIBLE_NATIVE" : BLOCKED,
+    runtimeAcceptanceReason: compatibleNative ? "UNKNOWN_HOST_VERSION" : null,
+  };
 }
 
 export function evidenceBaseName(profile, theme, scene, variant) {

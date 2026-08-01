@@ -32,6 +32,11 @@
       <Component Id="MainExecutableComponent" Guid="7BD9B640-5244-4F8B-8A24-82141AE61831" Win64="yes">
         <File Id="MainExecutableFile" Source="$(var.SourceExe)" Name="CodexThemeStudio.exe" Checksum="yes" />
         <RegistryValue Root="HKCU" Key="Software\CodexThemeStudio\Components" Name="MainExecutable" Type="integer" Value="1" KeyPath="yes" />
+        <RegistryValue Root="HKCU" Key="Software\Classes\.codextheme" Type="string" Value="CodexThemeStudio.Bundle" />
+        <RegistryValue Root="HKCU" Key="Software\Classes\CodexThemeStudio.Bundle" Type="string" Value="Codex Theme Bundle" />
+        <RegistryValue Root="HKCU" Key="Software\Classes\CodexThemeStudio.Bundle\DefaultIcon" Type="string" Value="[#MainExecutableFile],0" />
+        <RegistryValue Root="HKCU" Key="Software\Classes\CodexThemeStudio.Bundle\shell\open\command" Type="string" Value="&quot;[#MainExecutableFile]&quot; --open-package &quot;%1&quot;" />
+        <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="CodexThemeStudio" Type="string" Value="&quot;[#MainExecutableFile]&quot; --background" />
       </Component>
       <Component Id="UpdaterExecutableComponent" Guid="BBA1EE73-88A0-433E-9212-E642566C12E4" Win64="yes">
         <File Id="UpdaterExecutableFile" Source="$(var.UpdaterExe)" Name="CodexThemeStudio.Updater.exe" Checksum="yes" />

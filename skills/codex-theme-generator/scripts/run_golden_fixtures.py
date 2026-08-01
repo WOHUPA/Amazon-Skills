@@ -18,6 +18,7 @@ def main() -> int:
     builder = (ROOT / "scripts" / "build_theme.py").read_text(encoding="utf-8")
     validator = (ROOT / "scripts" / "validate_theme.py").read_text(encoding="utf-8")
     native_compiler = (ROOT / "scripts" / "compile_native_theme.py").read_text(encoding="utf-8")
+    bundle_builder = (ROOT / "scripts" / "bundle_theme.py").read_text(encoding="utf-8")
     checks = [
         (1, "完整深色主题", "Theme Pack v2" in skill and "SEMANTIC_ICON_SLOTS" in builder),
         (2, "双模式主题", "--pair" in skill and "themes_root" in builder),
@@ -36,6 +37,11 @@ def main() -> int:
         ))),
         (10, "原生主题编译", all(item in native_compiler for item in (
             "codex-theme-v1:", "write_native_files", "DEFAULT_CODE_THEME_ID", "NATIVE_DEFAULTS"
+        ))),
+        (11, "Bundle 一键交付", all(item in builder for item in (
+            "--bundle-output", "--series-id", "--series-name", '"bundleStatus"'
+        )) and all(item in bundle_builder for item in (
+            "bundle.json", "themes/", "sha256", "ZIP_DEFLATED"
         ))),
     ]
     results = [{"id": case_id, "name": name, "status": "PASS" if passed else "FAIL"} for case_id, name, passed in checks]

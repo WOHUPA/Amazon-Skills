@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.Text;
@@ -14,15 +15,15 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("Codex Theme Studio")]
 [assembly: AssemblyProduct("Codex Theme Studio")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("2.6.0.0")]
-[assembly: AssemblyFileVersion("2.6.0.0")]
-[assembly: AssemblyInformationalVersion("2.6.0")]
+[assembly: AssemblyVersion("2.7.8.0")]
+[assembly: AssemblyFileVersion("2.7.8.0")]
+[assembly: AssemblyInformationalVersion("2.7.8")]
 
 namespace CodexThemeStudio.Desktop
 {
     internal static class Program
     {
-        private const string AppVersion = "2.6.0";
+        private const string AppVersion = "2.7.8";
         private const string RuntimeResource = "CodexThemeStudio.Runtime.zip";
         private static readonly string StateRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -38,6 +39,11 @@ namespace CodexThemeStudio.Desktop
             bool prepareUninstall = HasArgument(args, "--prepare-uninstall");
             bool forceInstall = HasArgument(args, "--install-runtime") || HasArgument(args, "--repair");
             string engineCommand = GetArgumentValue(args, "--engine");
+            string openPackage = GetArgumentValue(args, "--open-package");
+            if (string.IsNullOrWhiteSpace(openPackage) && args.Length == 1 &&
+                string.Equals(Path.GetExtension(args[0]), ".codextheme", StringComparison.OrdinalIgnoreCase))
+                openPackage = args[0];
+            bool background = HasArgument(args, "--background");
             bool noUi = HasArgument(args, "--no-ui") || !string.IsNullOrWhiteSpace(engineCommand);
 
             try
@@ -56,20 +62,14 @@ namespace CodexThemeStudio.Desktop
 
                 string sid = WindowsIdentity.GetCurrent().User.Value;
                 using (Mutex mutex = new Mutex(false, "Local\\CodexThemeStudio." + sid + ".Desktop"))
+                using (SingleInstanceChannel channel = new SingleInstanceChannel(sid))
                 {
                     bool acquired;
                     try { acquired = mutex.WaitOne(0); }
                     catch (AbandonedMutexException) { acquired = true; }
                     if (!acquired)
                     {
-                        if (!noUi)
-                        {
-                            MessageBox.Show(
-                                "Codex Theme Studio 已经在运行。",
-                                "Codex Theme Studio",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Information);
-                        }
+                        channel.TrySend(string.IsNullOrWhiteSpace(openPackage) ? "__SHOW__" : Path.GetFullPath(openPackage), 1200);
                         return 0;
                     }
 
@@ -83,8 +83,18 @@ namespace CodexThemeStudio.Desktop
                     using (StudioClient client = new StudioClient(StateRoot, EngineRoot))
                     using (StudioTray tray = new StudioTray(client, Path.Combine(EngineRoot, "assets", "studio.ico")))
                     {
+                        channel.Start(delegate(string command)
+                        {
+                            if (command == "__EXIT__") return;
+                            client.Window.Dispatcher.BeginInvoke(new Action(delegate
+                            {
+                                if (command == "__SHOW__") client.ShowAndActivate();
+                                else client.OpenPackage(command);
+                            }));
+                        });
                         application.MainWindow = client.Window;
-                        client.Window.Show();
+                        if (!background || !string.IsNullOrWhiteSpace(openPackage)) client.Window.Show();
+                        if (!string.IsNullOrWhiteSpace(openPackage)) client.ImportThemeBundle(Path.GetFullPath(openPackage));
                         application.Run();
                     }
                     return 0;
@@ -131,10 +141,49 @@ namespace CodexThemeStudio.Desktop
         private static int RunEngineCommand(string[] args, string command)
         {
             string themeId = GetArgumentValue(args, "--theme");
+            string packagePath = GetArgumentValue(args, "--package");
             string resultPath = GetArgumentValue(args, "--result-file");
-            string[] engineArguments = string.Equals(command, "activate", StringComparison.OrdinalIgnoreCase)
-                ? new[] { command, themeId }
-                : new[] { command };
+            bool confirmed = HasArgument(args, "--confirm");
+            string normalized = command.Trim().ToLowerInvariant();
+            string[] supportedCommands = {
+                "status", "list", "preview", "import", "create-recipe", "activate", "rollback",
+                "pause", "resume", "verify", "restore"
+            };
+            if (!supportedCommands.Contains(normalized))
+            {
+                EngineCommandResult unsupported = new EngineCommandResult {
+                    ExitCode = 2,
+                    StandardOutput = string.Empty,
+                    StandardError = "Unsupported engine action: " + command
+                };
+                WriteEngineResult(resultPath, unsupported);
+                return unsupported.ExitCode;
+            }
+            string[] writeCommands = { "import", "create-recipe", "activate", "rollback", "pause", "resume", "restore" };
+            if (writeCommands.Contains(normalized) && !confirmed)
+            {
+                EngineCommandResult denied = new EngineCommandResult {
+                    ExitCode = 2,
+                    StandardOutput = string.Empty,
+                    StandardError = command + " requires --confirm after explicit user intent."
+                };
+                WriteEngineResult(resultPath, denied);
+                return denied.ExitCode;
+            }
+            string[] engineArguments;
+            if (normalized == "activate")
+                engineArguments = confirmed
+                    ? new[] { normalized, themeId, "-RestartExisting" }
+                    : new[] { normalized, themeId };
+            else if (normalized == "preview")
+                engineArguments = new[] { normalized, !string.IsNullOrWhiteSpace(packagePath) ? packagePath : themeId };
+            else if (normalized == "import")
+                engineArguments = new[] { normalized, packagePath };
+            else if (normalized == "create-recipe")
+                engineArguments = new[] { normalized, GetArgumentValue(args, "--recipe"), GetArgumentValue(args, "--image") };
+            else if (confirmed && (normalized == "resume" || normalized == "rollback"))
+                engineArguments = new[] { normalized, "-RestartExisting" };
+            else engineArguments = new[] { normalized };
 
             EngineCommandResult result;
             using (NativeThemeEngine engine = new NativeThemeEngine(StateRoot, EngineRoot))
@@ -143,17 +192,20 @@ namespace CodexThemeStudio.Desktop
                     .GetAwaiter().GetResult();
             }
 
-            if (!string.IsNullOrWhiteSpace(resultPath))
-            {
-                string fullPath = Path.GetFullPath(resultPath);
-                string parent = Path.GetDirectoryName(fullPath);
-                if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
-                string json = "{\"exitCode\":" + result.ExitCode +
-                    ",\"standardOutput\":\"" + EscapeJson(result.StandardOutput) +
-                    "\",\"standardError\":\"" + EscapeJson(result.StandardError) + "\"}";
-                File.WriteAllText(fullPath, json, new UTF8Encoding(false));
-            }
+            WriteEngineResult(resultPath, result);
             return result.ExitCode;
+        }
+
+        private static void WriteEngineResult(string resultPath, EngineCommandResult result)
+        {
+            if (string.IsNullOrWhiteSpace(resultPath)) return;
+            string fullPath = Path.GetFullPath(resultPath);
+            string parent = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+            string json = "{\"engineVersion\":\"" + AppVersion + "\",\"exitCode\":" + result.ExitCode +
+                ",\"standardOutput\":\"" + EscapeJson(result.StandardOutput) +
+                "\",\"standardError\":\"" + EscapeJson(result.StandardError) + "\"}";
+            File.WriteAllText(fullPath, json, new UTF8Encoding(false));
         }
 
         private static string EscapeJson(string value)

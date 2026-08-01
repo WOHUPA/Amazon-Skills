@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+import hashlib
 import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 
@@ -102,6 +104,90 @@ class ThemeToolTests(unittest.TestCase):
                 self.assertEqual(report.returncode, 0, report.stdout + report.stderr)
                 theme = json.loads((root / "theme.json").read_text(encoding="utf-8"))
                 self.assertEqual(theme["appearance"], appearance)
+
+    def test_bundle_contains_strict_manifest_and_verified_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "theme"
+            bundle = root / "fantasy.codextheme"
+            result = self.run_cli(
+                BUILD,
+                "--output-dir",
+                str(output),
+                "--id",
+                "aurora-calm",
+                "--name",
+                "极光静域",
+                "--bundle-output",
+                str(bundle),
+                "--series-id",
+                "fantasy",
+                "--series-name",
+                "幻想系列",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report["bundleStatus"], "COMPLETE")
+            self.assertEqual(Path(report["bundlePath"]), bundle)
+            with zipfile.ZipFile(bundle) as archive:
+                manifest = json.loads(archive.read("bundle.json"))
+                self.assertEqual(set(manifest), {
+                    "schemaVersion", "bundleId", "name", "series", "themes", "files",
+                })
+                self.assertEqual(manifest["schemaVersion"], 1)
+                self.assertEqual(manifest["series"], {"id": "fantasy", "name": "幻想系列"})
+                self.assertEqual(manifest["themes"], [{
+                    "id": "aurora-calm", "path": "themes/aurora-calm",
+                }])
+                for entry in manifest["files"]:
+                    payload = archive.read(entry["path"])
+                    self.assertEqual(len(payload), entry["size"])
+                    self.assertEqual(hashlib.sha256(payload).hexdigest(), entry["sha256"])
+
+    def test_pair_can_be_delivered_as_one_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = root / "paired.codextheme"
+            result = self.run_cli(
+                BUILD,
+                "--output-dir",
+                str(root / "paired"),
+                "--id",
+                "aurora",
+                "--name",
+                "极光",
+                "--pair",
+                "--bundle-output",
+                str(bundle),
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with zipfile.ZipFile(bundle) as archive:
+                manifest = json.loads(archive.read("bundle.json"))
+                self.assertEqual(
+                    [item["id"] for item in manifest["themes"]],
+                    ["aurora-dark", "aurora-light"],
+                )
+
+    def test_existing_bundle_blocks_and_rolls_back_theme_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = root / "existing.codextheme"
+            bundle.write_bytes(b"keep")
+            output = root / "theme"
+            result = self.run_cli(
+                BUILD,
+                "--output-dir",
+                str(output),
+                "--id",
+                "existing-bundle",
+                "--name",
+                "已有包",
+                "--bundle-output",
+                str(bundle),
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(output.exists())
+            self.assertEqual(bundle.read_bytes(), b"keep")
 
     def test_malicious_svg_fails_atomically(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
