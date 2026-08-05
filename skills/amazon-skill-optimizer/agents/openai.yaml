@@ -1,0 +1,7 @@
+interface:
+  display_name: "Amazon Skill 优化器"
+  short_description: "诊断、优化并回归验证亚马逊跨境电商 Codex Skill"
+  default_prompt: "使用 $amazon-skill-optimizer 审计这个亚马逊 Skill，并输出只读诊断、最小 Diff 提案与回归结论。"
+
+policy:
+  allow_implicit_invocation: true
