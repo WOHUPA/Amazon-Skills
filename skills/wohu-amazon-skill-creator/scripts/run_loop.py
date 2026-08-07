@@ -46,6 +46,31 @@ def split_eval_set(eval_set: list[dict], holdout: float, seed: int = 42) -> tupl
     return train_set, test_set
 
 
+def load_eval_set(eval_path: Path) -> list[dict]:
+    """Load and validate a UTF-8 trigger evaluation set."""
+    try:
+        payload = json.loads(eval_path.read_text(encoding="utf-8-sig"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"Eval set not found: {eval_path}") from exc
+    except PermissionError as exc:
+        raise ValueError(f"Eval set is not readable: {eval_path}") from exc
+    except UnicodeError as exc:
+        raise ValueError(f"Eval set must use UTF-8 encoding: {eval_path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Eval set JSON is invalid: {exc}") from exc
+
+    if not isinstance(payload, list) or not payload:
+        raise ValueError("Eval set must be a non-empty JSON array")
+    for index, item in enumerate(payload, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Eval case {index} must be an object")
+        if not isinstance(item.get("query"), str) or not item["query"].strip():
+            raise ValueError(f"Eval case {index} requires a non-empty query")
+        if not isinstance(item.get("should_trigger"), bool):
+            raise ValueError(f"Eval case {index} requires boolean should_trigger")
+    return payload
+
+
 def run_loop(
     eval_set: list[dict],
     skill_path: Path,
@@ -245,7 +270,7 @@ def run_loop(
     }
 
 
-def main():
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run eval + improve loop")
     parser.add_argument("--eval-set", required=True, help="Path to eval set JSON file")
     parser.add_argument("--skill-path", required=True, help="Path to skill directory")
@@ -260,14 +285,23 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
     parser.add_argument("--report", default="auto", help="Generate HTML report at this path (default: 'auto' for temp file, 'none' to disable)")
     parser.add_argument("--results-dir", default=None, help="Save all outputs (results.json, report.html, log.txt) to a timestamped subdirectory here")
-    args = parser.parse_args()
+    return parser.parse_args(argv)
 
-    eval_set = json.loads(Path(args.eval_set).read_text(encoding="utf-8"))
-    skill_path = Path(args.skill_path)
+
+def run_from_args(args: argparse.Namespace) -> None:
+    """Validate CLI options and execute one optimization loop."""
+    if args.num_workers < 1 or args.timeout < 1 or args.max_iterations < 1 or args.runs_per_query < 1:
+        raise ValueError("num-workers, timeout, max-iterations and runs-per-query must be positive")
+    if not 0 <= args.trigger_threshold <= 1:
+        raise ValueError("trigger-threshold must be between 0 and 1")
+    if not 0 <= args.holdout < 1:
+        raise ValueError("holdout must be at least 0 and less than 1")
+
+    eval_set = load_eval_set(Path(args.eval_set).expanduser())
+    skill_path = Path(args.skill_path).expanduser().resolve()
 
     if not (skill_path / "SKILL.md").exists():
-        print(f"Error: No SKILL.md found at {skill_path}", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError(f"No SKILL.md found at {skill_path}")
 
     name, _, _ = parse_skill_md(skill_path)
 
@@ -277,7 +311,7 @@ def main():
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             live_report_path = Path(tempfile.gettempdir()) / f"skill_description_report_{skill_path.name}_{timestamp}.html"
         else:
-            live_report_path = Path(args.report)
+            live_report_path = Path(args.report).expanduser()
         # Open the report immediately so the user can watch
         live_report_path.write_text("<html><body><h1>Starting optimization loop...</h1><meta http-equiv='refresh' content='5'></body></html>", encoding="utf-8")
         webbrowser.open(str(live_report_path))
@@ -287,7 +321,7 @@ def main():
     # Determine output directory (create before run_loop so logs can be written)
     if args.results_dir:
         timestamp = time.strftime("%Y-%m-%d_%H%M%S")
-        results_dir = Path(args.results_dir) / timestamp
+        results_dir = Path(args.results_dir).expanduser() / timestamp
         results_dir.mkdir(parents=True, exist_ok=True)
     else:
         results_dir = None
@@ -328,5 +362,18 @@ def main():
         print(f"Results saved to: {results_dir}", file=sys.stderr)
 
 
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    try:
+        run_from_args(args)
+    except anthropic.APIError as exc:
+        print(f"Error: Anthropic API request failed: {exc}", file=sys.stderr)
+        return 2
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

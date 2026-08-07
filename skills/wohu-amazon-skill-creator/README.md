@@ -1,5 +1,7 @@
 # wohu-amazon-skill-creator
 
+当前版本：v2.1.0
+
 > **作者**：wohu ｜ 公众号「wohu amazon」
 >
 > Learn in public！把亚马逊卖家的实战流程做成可安装、可评测、可迭代的 AI skill。
@@ -42,6 +44,7 @@
 - 自动把 5 步结果映射到 `SKILL.md` 的关键段落
 - 按选品开发、关键词广告、Listing 优化、日常运营监控加载业务模板
 - 引导使用当前可发现的 Sorftime、SIF、SellerSprite MCP 工具
+- 根据场景、站点、必需字段和测评证据推荐 MCP 主源、校验源与兜底；推荐可由用户覆盖，不设置全局强制默认源
 - 生成 2-3 个真实用户提示词作为测试用例
 - 支持 with-skill 与 baseline 对照评测
 - 聚合 benchmark，并生成 HTML 可视化评审页
@@ -93,8 +96,8 @@
 
 关注「**wohu amazon**」，获取 AI x 跨境电商的实战经验、工具和方法论：
 
-<img src="../../docs/images/wechat-official-account-qrcode.jpg" width="200" alt="公众号二维码" />
+<img src="../../assets/traffic/wechat-official-account.jpg" width="200" alt="公众号二维码" />
 
-添加个人微信，一起交流 AI + 跨境电商的实战玩法：
+扫码加入交流群，一起交流 AI + 跨境电商的实战玩法：
 
-<img src="../../docs/images/wechat-personal-qrcode.jpg" width="200" alt="个人微信二维码" />
+<img src="../../assets/traffic/wechat-group.jpeg" width="200" alt="交流群二维码" />

@@ -4,6 +4,18 @@
     "should_trigger": true
   },
   {
+    "query": "帮我创建 skill，把亚马逊新品首月监控 SOP 固化下来。",
+    "should_trigger": true
+  },
+  {
+    "query": "给我生成一个 skill，用来每周整理 Amazon 广告浪费词和否词建议。",
+    "should_trigger": true
+  },
+  {
+    "query": "搭一个可复用 skill，以后我说库存预警就按固定流程跑。",
+    "should_trigger": true
+  },
+  {
     "query": "先快速试试，帮我把广告搜索词浪费词识别流程做成 skill，先别问太多。",
     "should_trigger": true
   },
@@ -17,6 +29,10 @@
   },
   {
     "query": "帮我分析这个 ASIN 的竞品关键词机会，直接给结论。",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我生成一份亚马逊广告周报，直接给这一次的报告，不要做成 skill。",
     "should_trigger": false
   },
   {

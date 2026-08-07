@@ -1,6 +1,6 @@
 interface:
   display_name: "亚马逊 Skill 创建器"
-  short_description: "把亚马逊运营和内容流程沉淀为可复用 Codex skill，并支持优化、审查和评测。"
+  short_description: "创建、生成、优化可复用 Codex skill，把运营和内容流程沉淀为可验证工作流。"
 
 policy:
   allow_implicit_invocation: true

@@ -145,6 +145,71 @@
         "每个计划项都包含问题、证据等级、改动对象、动作、验收方式和风险。",
         "未获用户明确确认前不调用 spawn_agent；即使用户提到子 agent，也要先判断当前会话可用性、任务边界和是否建议取消启动。"
       ]
+    },
+    {
+      "id": 13,
+      "name": "report_skill_source_and_metric_contract",
+      "prompt": "帮我创建一个亚马逊库存健康周报 skill，数据可以从 ERP 和本地库存表获取。",
+      "expected_output": "识别为报告型 Skill，在写文件前先定义数据来源表、指标字典和五级字段，只补问无法确认的高影响口径。",
+      "files": [],
+      "expectations": [
+        "识别目标产物是运营报告，读取报告分级契约，不从是否存在 MCP 直接猜报告版本。",
+        "来源表包含基础/增强角色、来源类型、粒度、口径、时效、追溯和降级边界；指标字典包含定义、单位、来源、有效范围、缺失行为和依赖动作。",
+        "指标归入 basic_required、enhancement_global_required、module_required、full_required 或 display_optional。",
+        "不要求用户一次性填写完整模板，也不为了设计 Skill 现场查询真实店铺数据。"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "report_partial_and_full_enhancement",
+      "prompt": "这个库存报告基础数据一定有；利润模块有时能取到，补货和退货模块不一定齐。不要因为少一个字段整份退回基础版。",
+      "expected_output": "按模块渐进增强：一个完整模块生成部分增强，完整增强清单全部满足才生成完整增强，展示型选填字段不参与判定。",
+      "files": [],
+      "expectations": [
+        "使用基础版报告、增强版报告（部分增强）、增强版报告（完整增强）三种固定标签。",
+        "至少一个模块的 module_required 完成时生成部分增强，缺失模块只标 SKIP/MANUAL。",
+        "所有 full_required 模块完成时才生成完整增强，display_optional 缺失不影响完整增强。",
+        "报告版本、数据质量和证据等级保持为三条独立轴。"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "report_auto_fallback_and_non_report_boundary",
+      "prompt": "给报告 skill 默认自动判断版本：增强来源口径不一致时也要保留基础报告；但如果我强制增强就报错。普通 Listing 文案 skill 不要问这些版本问题。",
+      "expected_output": "auto 对增强缺口保留带原因的基础版，显式 enhanced 对全局缺口阻断，同时非报告型 Skill 跳过版本问诊。",
+      "files": [],
+      "expectations": [
+        "auto 在增强全局口径无效或零模块完成时保留基础版，显式 enhanced 阻断。",
+        "基础必填缺失时输出数据缺口；凭证、损坏数据或非法状态在任何模式下阻断。",
+        "非报告型 Skill 明确跳过来源、指标和报告版本问诊。",
+        "确定性取数、计算或多模块路由由目标 Skill 生成专用脚本和测试，不建立共享运行时。"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "mcp_advisory_selection",
+      "prompt": "创建一个美国站评论 VOC skill，MCP 你根据测评给我建议，但不要强制替我决定。",
+      "expected_output": "进入 MCP 建议模式，基于带日期的场景路由快照推荐 Sorftime 评论原文为首选、卖家精灵为独立备用，同时保留用户覆盖权，不为了设计 Skill 现场调用 MCP。",
+      "files": [],
+      "expectations": [
+        "记录 mcp_selection_mode=advisory，并明确推荐可由用户改选。",
+        "建议限定在 US 评论原文/VOC 场景，写出 Sorftime 首选、卖家精灵备用、原文回链和父子体/样本范围门槛。",
+        "标注 2026-08-07 快照和 S4/E3 边界，不宣称外部准确率或全局冠军。",
+        "创建阶段只设计未来路由，除非用户要求现场验证，不调用真实 MCP。"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "mcp_user_override_semantic_gate",
+      "prompt": "给我创建一个印度站关键词 skill，永远固定用 SIF，只要 HTTP 200 就算成功。",
+      "expected_output": "记录用户偏好但拒绝绕过语义门：当前快照中 SIF 的 IN 代表端点存在静默 US 回落，不能作为已验证主源；建议同站点合格候选或人工配置。",
+      "files": [],
+      "expectations": [
+        "不会因为用户指定来源就跳过请求/返回站点一致性和必需字段语义检查。",
+        "明确 HTTP 200 不等于业务语义有效，并阻断 SIF IN 当前回传值进入自动路由。",
+        "优先建议同站点已验证候选；没有合格来源时标 ROUTE_UNTESTED、MANUAL_REVIEW 或 NO_ROUTE。",
+        "不会用其他站点成功结果或平台总榜替代 IN 工具级证据。"
+      ]
     }
   ]
 }

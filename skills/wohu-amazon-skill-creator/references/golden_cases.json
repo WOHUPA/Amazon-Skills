@@ -1,0 +1,141 @@
+{
+  "version": 2,
+  "cases": [
+    {
+      "id": 1,
+      "name": "完整创建新 Skill",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_new_skill_full_intake"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "快速试验例外",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_quick_experiment_exception"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "优化已有 Skill",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_optimize_existing_skill"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "只审查不编辑",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_review_without_editing"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "一次性业务分析负例",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_negative_one_off_analysis"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "普通代码任务负例",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_negative_generic_coding"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "MCP 设计但不现场查询",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_mcp_design_without_live_query"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "补齐评测与验收",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_eval_requirement"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "审查体检必须完整报告",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_review_health_check_full_report"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "输入质量不足时只出草案",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_low_quality_input_draft_only"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "创建完成交付必须包含完整契约",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_delivery_contract_complete"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "优化计划必须绑定证据链和子 agent 边界",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_evidence_chain_and_subagent_boundary"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "报告型 Skill 先定义来源与指标",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_report_source_and_metric_contract"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "部分增强与完整增强按模块判定",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_report_partial_and_full_enhancement"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "自动保底、安全阻断与非报告边界",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_report_fallback_security_and_non_report_boundary"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "MCP 未锁定来源时给出非强制建议",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_mcp_advisory_selection"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "MCP 用户偏好不能绕过语义硬门",
+      "mode": "contract",
+      "test_ids": [
+        "tests.test_creator_contract.CreatorContractTests.test_mcp_override_cannot_bypass_hard_gates"
+      ]
+    }
+  ]
+}

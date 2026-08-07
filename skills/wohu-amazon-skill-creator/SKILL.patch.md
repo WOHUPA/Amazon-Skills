@@ -1,5 +1,84 @@
 # SKILL.patch.md
 
+## [2026-08-08] v2.1.0 - MCP 数据源建议与场景路由
+
+### 背景
+
+创建器原有 MCP 指引按供应商介绍能力，但没有把 Skill 场景、精确站点、必需字段、证据等级、主备切换和用户偏好组合成统一选源方法，容易把可用工具清单误写成默认来源。
+
+### 已修复
+
+- 新增 `references/mcp-selection.md`，吸收《MCP测评方法》v1.6.0 和 2026-08-07 仪表盘的场景路由结果。
+- 增加 `advisory`、`user_fixed`、`auto_route` 三种选源模式；默认只推荐，不替用户强制锁定来源。
+- 统一安全、事实来源、当前可发现性、精确站点、Schema、语义贡献、场景产物和运行约束资格门。
+- 固化 7 类当前场景建议：ASIN、关键词、Amazon 类目、评论/VOC、流量排名、跨字段判断和 niche 研究。
+- 保留仪表盘的快照日期、S4/E3 边界、站点例外、`providerFamily`、LinkFox OS 编排身份和复测触发器。
+- 把 MCP 选源方法接入 Q2、5 问映射、主结构、已有 Skill 优化、测试要求和完成定义。
+- 新增 Golden 正例与反例，验证“未指定来源时可推荐”和“用户偏好不能绕过语义/安全门”。
+
+### 验证方式
+
+- 运行 `python scripts/quick_validate.py <skill目录>`。
+- 运行 `python scripts/run_golden_fixtures.py --format json`。
+- 运行 `python -m unittest discover -s tests -t .`。
+- 运行 `amazon-skill-optimizer` 的只读审计、通用内核验证和目标范围健康检查。
+
+## [2026-08-02] v2.0.0 - 报告基础版与渐进增强契约
+
+### 背景
+
+报告型 Skill 过去只在 Q2 收集工具和数据来源、在 Q5 收集产物形式，没有统一的数据来源表、指标字典、部分/完整增强判定和缺失模块降级规则，容易把“有无 MCP”误当成报告版本，也容易因单个选填项缺失整份回退。
+
+### 已修复
+
+- 只对分析、诊断、监控和运营报告启用报告分级，非报告型 Skill 明确跳过。
+- 新增 `references/report-editions.md`，统一来源表、指标字典、五级字段、数据有效性、`auto|basic|enhanced`、模块覆盖和报告头模板。
+- 固定三种标签：`基础版报告`、`增强版报告（部分增强）`、`增强版报告（完整增强）`。
+- 默认 `auto` 保留基础报告；至少一个模块完整即部分增强；完整增强清单全部满足才标完整增强；`display_optional` 不参与判定。
+- 把报告契约接入 Q2、Q5、主结构、已有 Skill 优化、写作指南、完成定义和回归要求。
+- 增加 15 个 Golden Case 的结构化清单、标准库单测和统一 Runner，覆盖原 12 个创建器契约与 3 个报告分级场景。
+- 补齐创建/优化写文件的确认、备份和回滚边界，并移除会被误判为不可逆操作的歧义措辞。
+- 缩短 frontmatter 首句，保持原触发范围并消除触发词前置警告。
+- 补齐 CLI 的路径、编码、JSON 和写入异常处理；打包器不再排除 `evals/`，并校验归档完整性和缓存污染。
+- 拆分 HTML 报告生成函数，保留输出行为并增加实现级单测。
+- 在 `SKILL.md`、README 和本变更记录中统一当前版本 `v2.0.0`。
+
+### 验证方式
+
+- 运行 `python scripts/quick_validate.py <skill目录>`。
+- 运行 `python scripts/run_golden_fixtures.py --format json`。
+- 运行 `python -m unittest discover -s tests -t .`。
+- 运行 `skill-optimizer` 的 `health_check.py` 和 `verify.py --self-test`。
+- 重建 ZIP 后检查新契约和评测文件存在，且归档不含 `__pycache__` 或 `.pyc`。
+
+## 2026-07-09 - 全局创建 Skill 路由增强
+
+### 背景
+
+用户要求以后提到“创建 skill”“生成 skill”等类似关键词时，默认调用 `wohu-amazon-skill-creator`，并应用到全局协作规则。
+
+### 已修复
+
+- 收敛 `SKILL.md` frontmatter description：把“创建 skill、生成 skill、做一个 skill、搭一个 skill、沉淀流程/SOP 为可复用 skill”放到第一句，提升触发词前置质量。
+- 在 `SKILL.md` 正文新增默认触发话术清单，并明确一次性报告、ASIN 分析、普通代码或文件总结不触发。
+- 更新 `agents/openai.yaml` 的短描述，补充“创建、生成、优化”触发语义。
+- 在全局 `C:\Users\quyib\.codex\AGENTS.md` 增加默认路由规则：创建/生成/沉淀 skill 类需求优先调用本 skill。
+- 在 `evals/trigger-evals.json` 增加 3 条创建/生成 skill 正例和 1 条“不做成 skill”的反例。
+
+### 验证方式
+
+- 运行 `python scripts/quick_validate.py <skill目录>`。
+- 运行 `python -m json.tool evals/trigger-evals.json`。
+- 运行 `skill-optimizer` 的 `health_check.py <skill目录> --skills-root <同根 skills目录> --format json`。
+- 使用 `evals/trigger-evals.json` 跑触发评测入口；若外部 `claude` CLI、认证或模型不可用，标注为外部依赖限制。
+
+### 本轮验证结果
+
+- `quick_validate.py` 通过。
+- `trigger-evals.json` 是合法 JSON。
+- `skill-optimizer` JSON 体检通过：`100/100`，A，`WARN=0`，`FAIL=0`，`SKIP=0`，同根触发冲突审计未发现明显重叠。
+- `scripts/run_eval.py` 已能读取 16 条触发评测用例并执行入口；本机 Claude Code 当前默认模型返回 `model_not_found`，因此真实触发率评测需先修复外部模型配置后重跑。
+
 ## 2026-07-08 - 安全边界与触发评测链修复
 
 ### 背景
