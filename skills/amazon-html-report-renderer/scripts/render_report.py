@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Render an amazon-html-report/v1 JSON spec into a self-contained HTML report.
-
-Usage:
-    python scripts/render_report.py --spec <spec.json> --output <report.html> [options]
-
-This CLI is the deterministic renderer entrypoint. All business values, references,
-hashes and SVG geometry are computed in code; the model never hand-computes them.
-"""
+"""Render a validated Amazon report specification as a self-contained HTML file."""
 
 from __future__ import annotations
 
@@ -15,84 +8,91 @@ import json
 import sys
 from pathlib import Path
 
-from report_renderer import (
-    AmazonHTMLReportError,
-    build_document,
-    load_and_validate,
-    write_artifact_pair,
-)
+from report_renderer import RenderError, execute_render
+
+
+class JsonArgumentParser(argparse.ArgumentParser):
+    """Raise structured errors so stdout remains a single JSON object."""
+
+    def error(self, message: str) -> None:
+        raise RenderError("CLI_ARGUMENT_ERROR", message, "cli")
 
 
 def configure_stdio() -> None:
+    """Keep machine output valid on Windows consoles with legacy code pages."""
+
     for stream in (sys.stdout, sys.stderr):
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure is not None:
             reconfigure(encoding="utf-8", errors="replace")
 
 
-def main() -> int:
-    configure_stdio()
-    parser = argparse.ArgumentParser(description="Render Amazon HTML report v1")
-    parser.add_argument("--spec", type=Path, required=True, help="report spec JSON path")
-    parser.add_argument("--output", type=Path, required=True, help="output HTML path")
+def parse_args() -> argparse.Namespace:
+    parser = JsonArgumentParser(
+        description="Render amazon-html-report/v1 JSON to a self-contained offline HTML report."
+    )
+    parser.add_argument("--spec", required=True, type=Path, help="amazon-html-report/v1 JSON")
+    parser.add_argument("--output", required=True, type=Path, help="target .html file")
     parser.add_argument(
         "--family",
-        choices=["auto", "performance", "insight", "operations", "knowledge"],
-        default=None,
-        help="override layout family",
+        choices=("auto", "performance", "insight", "operations", "knowledge"),
+        default="auto",
+        help="layout family override",
     )
-    parser.add_argument("--validate-only", action="store_true", help="validate and exit")
-    parser.add_argument("--overwrite", action="store_true", help="allow replacing existing output")
-    parser.add_argument(
-        "--receipt-path-mode",
-        choices=["absolute", "relative"],
-        default="absolute",
-        help="receipt path encoding mode",
-    )
-    args = parser.parse_args()
+    parser.add_argument("--validate-only", action="store_true", help="validate without writing")
+    parser.add_argument("--overwrite", action="store_true", help="replace existing artifacts")
+    parser.add_argument("--receipt-path-mode", choices=("absolute", "relative"), default="absolute",
+                        help="receipt artifact paths; relative paths are based on the receipt directory")
+    return parser.parse_args()
 
+
+def emit(payload: dict[str, object]) -> None:
+    """Emit exactly one compact, machine-readable JSON object."""
+
+    sys.stdout.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    sys.stdout.flush()
+
+
+def main() -> int:
+    configure_stdio()
     try:
-        spec, validation = load_and_validate(args.spec, family_override=args.family)
-    except AmazonHTMLReportError as exc:
-        sys.stderr.write(f"ERROR: {exc}\n")
-        envelope = {"ok": False, "error": str(exc), "status": "ERROR"}
-        sys.stdout.write(json.dumps(envelope, ensure_ascii=False, sort_keys=True) + "\n")
-        return 2
-
-    if args.validate_only:
-        envelope = {
-            "ok": True,
-            "status": spec["report"]["status"],
-            "validation": validation,
-            "output_path": None,
-            "receipt_path": None,
-        }
-        sys.stdout.write(json.dumps(envelope, ensure_ascii=False, sort_keys=True) + "\n")
-        return 0
-
-    try:
-        document, receipt, paths = write_artifact_pair(
-            spec,
+        args = parse_args()
+        result = execute_render(
+            spec_path=args.spec,
             output_path=args.output,
+            family_override=args.family,
+            validate_only=args.validate_only,
             overwrite=args.overwrite,
             receipt_path_mode=args.receipt_path_mode,
         )
-    except AmazonHTMLReportError as exc:
-        sys.stderr.write(f"ERROR: {exc}\n")
-        envelope = {"ok": False, "error": str(exc), "status": "ERROR"}
-        sys.stdout.write(json.dumps(envelope, ensure_ascii=False, sort_keys=True) + "\n")
+    except RenderError as exc:
+        emit(
+            {
+                "ok": False,
+                "status": "BLOCKED",
+                "error": {
+                    "code": exc.code,
+                    "message": exc.message,
+                    "path": exc.path,
+                },
+            }
+        )
         return 2
+    except Exception as exc:  # Fail closed without leaking input data or a traceback.
+        emit(
+            {
+                "ok": False,
+                "status": "BLOCKED",
+                "error": {
+                    "code": "INTERNAL_RENDER_ERROR",
+                    "message": type(exc).__name__,
+                    "path": "renderer",
+                },
+            }
+        )
+        return 3
 
-    envelope = {
-        "ok": True,
-        "status": spec["report"]["status"],
-        "output_path": str(paths["html"]),
-        "receipt_path": str(paths["receipt"]),
-        "html_hash": receipt["html_hash"],
-        "manifest_hash": receipt["manifest_hash"],
-        "template_version": receipt["template_version"],
-    }
-    sys.stdout.write(json.dumps(envelope, ensure_ascii=False, sort_keys=True) + "\n")
+    emit(result)
     return 0
 
 
