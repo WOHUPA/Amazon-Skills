@@ -1,0 +1,83 @@
+{
+  "version": "1.0.0",
+  "design_read": "面向中国 Amazon 卖家和运营团队的高密度、证据优先 B2B 报告，视觉严肃、现代、有 Amazon 识别度，采用语义化 HTML、原生 CSS 和内联 SVG。",
+  "taste_dials": {
+    "design_variance": 5,
+    "motion_intensity": 2,
+    "visual_density": 7
+  },
+  "color": {
+    "accent": "#FF9900",
+    "accent_strong": "#E47911",
+    "info": "#2563EB",
+    "success": "#16803C",
+    "warning": "#B45309",
+    "danger": "#C62828",
+    "light": {
+      "page": "#F6F7F9",
+      "surface": "#FFFFFF",
+      "surface_muted": "#F0F2F5",
+      "text": "#17202A",
+      "text_muted": "#5D6875",
+      "border": "#D8DDE3"
+    },
+    "dark": {
+      "page": "#111418",
+      "surface": "#191E24",
+      "surface_muted": "#222831",
+      "text": "#F3F5F7",
+      "text_muted": "#B6BEC8",
+      "border": "#343C46"
+    }
+  },
+  "radius": {
+    "content": "12px",
+    "control": "8px",
+    "status": "999px"
+  },
+  "typography": {
+    "font_stack": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', sans-serif",
+    "mono_stack": "ui-monospace, 'Cascadia Code', 'SFMono-Regular', Consolas, monospace",
+    "h1_desktop": "clamp(2.5rem, 4vw, 3.5rem)",
+    "h1_mobile": "clamp(2rem, 10vw, 2.75rem)",
+    "h2": "clamp(1.75rem, 2.6vw, 2.25rem)",
+    "body": "1rem",
+    "small": "0.875rem",
+    "line_height_body": 1.65,
+    "line_height_heading": 1.15
+  },
+  "space": {
+    "1": "4px",
+    "2": "8px",
+    "3": "12px",
+    "4": "16px",
+    "5": "24px",
+    "6": "32px",
+    "7": "48px",
+    "8": "64px"
+  },
+  "layout": {
+    "content_max": "1440px",
+    "reading_max": "760px",
+    "gutter": "clamp(16px, 4vw, 48px)",
+    "breakpoints": {
+      "mobile": "390px",
+      "tablet": "768px",
+      "desktop": "1440px"
+    }
+  },
+  "motion": {
+    "fast": "120ms",
+    "standard": "180ms",
+    "easing": "cubic-bezier(0.2, 0, 0, 1)",
+    "reduced_motion": "disable_nonessential"
+  },
+  "constraints": {
+    "single_decorative_accent": true,
+    "print_theme": "light",
+    "remote_assets": false,
+    "generated_evidence_images": false,
+    "progress_bars_are_semantic_only": true,
+    "section_theme_inversion": false
+  }
+}

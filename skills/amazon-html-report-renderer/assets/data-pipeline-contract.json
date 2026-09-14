@@ -1,0 +1,172 @@
+{
+  "schema_version": "1.2",
+  "catalog_version": "amazon-html-report-renderer-v1",
+  "datasets": [
+    {
+      "dataset_id": "amazon_report_spec",
+      "description": "Immutable, validated amazon-html-report/v1 handoff used to render one HTML report and receipt.",
+      "provider_family": "upstream_amazon_skill",
+      "mutability": "IMMUTABLE",
+      "grain": {
+        "entity_fields": ["report_id"],
+        "grain_key_fields": ["scope_fingerprint", "report_id"],
+        "time_grain": "not_applicable"
+      },
+      "refresh": {
+        "mode": "FULL_SNAPSHOT",
+        "coverage": {
+          "basis": "OBSERVED_ROWS_AND_EXPLICIT_STATUS",
+          "request_interval_counts_as_coverage": false,
+          "status_field": "validation_status",
+          "complete_statuses": ["OBSERVED", "NO_ROW"],
+          "field_group_aware": true,
+          "field_group_field": "contract_field_group",
+          "denominator_basis": "EXPECTED_UNITS",
+          "coverage_output_field": "validated_fact_coverage"
+        }
+      },
+      "identity": {
+        "natural_key": {
+          "key_version": "v1",
+          "fields": ["scope_fingerprint", "report_id"],
+          "required_identity_fields": ["scope_fingerprint", "report_id"]
+        },
+        "scope": {
+          "canonical_fields": ["report_type", "marketplace", "period_label"],
+          "fingerprint_field": "scope_fingerprint",
+          "canonicalization_version": "amazon-html-report-v1",
+          "fingerprint_algorithm": "SHA-256"
+        },
+        "version": {
+          "source_version_field": "report_version",
+          "stale_policy": "REJECT",
+          "same_version_conflict_policy": "REJECT"
+        }
+      },
+      "merge": {
+        "strategy": "SNAPSHOT_REPLACE"
+      },
+      "plan_binding": {
+        "base_state_hash_field": "base_state_hash",
+        "scope_fingerprint_field": "scope_fingerprint",
+        "provider_family_field": "provider_family",
+        "run_date_field": "render_run_date",
+        "ranges_field": "declared_period",
+        "fields_field": "validated_fields",
+        "reject_stale_plan": true
+      },
+      "lineage": {
+        "producer_id": "amazon_html_report_renderer",
+        "transform_version_field": "template_version",
+        "source_artifact_id_field": "report_id",
+        "source_artifact_hash_field": "source_spec_raw_hash",
+        "plan_fingerprint_field": "render_plan_fingerprint",
+        "state_hash_field": "render_state_hash",
+        "manifest_hash_field": "manifest_hash",
+        "consumer_verification": {
+          "mode": "RECOMPUTE_HASH_CHAIN",
+          "trust_embedded_audit_only": false,
+          "verify_fields": [
+            "template_version",
+            "report_id",
+            "source_spec_raw_hash",
+            "input_semantic_hash",
+            "render_plan_fingerprint",
+            "render_state_hash",
+            "html_hash",
+            "manifest_hash",
+            "base_state_hash",
+            "scope_fingerprint",
+            "provider_family",
+            "render_run_date",
+            "declared_period",
+            "validated_fields",
+            "data_as_of",
+            "cutoff",
+            "revision_id",
+            "supersedes_revision_id"
+          ]
+        }
+      },
+      "timing": {
+        "timezone": "UTC",
+        "data_cutoff_field": "data_as_of",
+        "source_watermark_field": "cutoff",
+        "allowed_lateness": {
+          "value": 0,
+          "unit": "minute"
+        },
+        "late_arrival_policy": "REJECT",
+        "future_data_policy": "REJECT"
+      },
+      "revision": {
+        "revision_id_field": "revision_id",
+        "supersedes_revision_id_field": "supersedes_revision_id",
+        "revision_reason_field": "revision_reason",
+        "preserve_history": true,
+        "restatement_policy": "NEW_REVISION"
+      },
+      "commit": {
+        "concurrency_control": "COMPARE_AND_SWAP",
+        "compare_field": "base_state_hash",
+        "atomic_commit": true,
+        "commit_manifest_field": "manifest_hash",
+        "readback_verification": true,
+        "readback_fields": ["render_state_hash", "html_hash", "manifest_hash"]
+      },
+      "idempotency": {
+        "canonical_input_hash_field": "input_semantic_hash",
+        "same_input_policy": "NO_OP_OR_SAME_STATE_HASH",
+        "attempt_metadata_outside_state_hash": true,
+        "validation_cases": [
+          {
+            "case_id": "same_spec_rerun",
+            "case_type": "SAME_INPUT_RERUN",
+            "expected_result": "NO_OP_OR_SAME_STATE_HASH"
+          },
+          {
+            "case_id": "concurrent_output_commit",
+            "case_type": "CONCURRENT_COMMIT",
+            "expected_result": "REJECT"
+          }
+        ]
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "source_report_spec",
+      "dataset_id": "amazon_report_spec",
+      "role": "SOURCE",
+      "content_hash_field": "source_spec_raw_hash"
+    },
+    {
+      "artifact_id": "rendered_html",
+      "dataset_id": "amazon_report_spec",
+      "role": "REPORT",
+      "content_hash_field": "html_hash"
+    },
+    {
+      "artifact_id": "render_receipt",
+      "dataset_id": "amazon_report_spec",
+      "role": "MANIFEST",
+      "content_hash_field": "manifest_hash"
+    }
+  ],
+  "handoffs": [
+    {
+      "handoff_id": "upstream_spec_handoff",
+      "producer_id": "upstream_amazon_skill",
+      "consumer_id": "amazon_html_report_renderer",
+      "artifact_ids": ["source_report_spec"],
+      "verification_mode": "RECOMPUTE_HASH_CHAIN"
+    },
+    {
+      "handoff_id": "local_report_handoff",
+      "producer_id": "amazon_html_report_renderer",
+      "consumer_id": "local_report_consumer",
+      "artifact_ids": ["rendered_html", "render_receipt"],
+      "verification_mode": "RECOMPUTE_HASH_CHAIN"
+    }
+  ]
+}

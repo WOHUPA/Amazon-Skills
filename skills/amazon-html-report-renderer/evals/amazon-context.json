@@ -1,0 +1,49 @@
+{
+  "selected_domain_packs": [
+    "visual-content",
+    "business-analytics"
+  ],
+  "context": {
+    "marketplace": "US",
+    "country": "US",
+    "locale": "zh-CN",
+    "category": "cross-category-reporting",
+    "product_type": "amazon-business-report",
+    "seller_model": "private_label",
+    "fulfillment_model": "mixed",
+    "business_stage": "mature",
+    "target_customer": "中国 Amazon 卖家与运营团队",
+    "price_band": {
+      "min": 0,
+      "max": 1000
+    },
+    "business_objective": [
+      "把上游已计算的 Amazon 业务数据确定性渲染为离线 HTML 报告",
+      "保留证据、缺失和数据质量边界"
+    ],
+    "constraints": [
+      "只读渲染，不取数、不计算业务结论、不发布",
+      "不接受任意 HTML、Markdown 或 JavaScript",
+      "不加载远程资源"
+    ],
+    "available_data": [
+      "skill_files",
+      "evals",
+      "user_provided"
+    ],
+    "data_time_window": {
+      "start": "2026-01-01",
+      "end": "2026-08-23"
+    },
+    "currency": "USD",
+    "tax_basis": "unknown",
+    "attribution_window": {
+      "click_days": 0,
+      "view_days": 0,
+      "source": "not_applicable_for_renderer"
+    },
+    "account_data_or_public_data": "none",
+    "read_only_or_write_action": "read_only",
+    "risk_tier": "medium"
+  }
+}

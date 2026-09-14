@@ -1,0 +1,50 @@
+[
+  {
+    "case_id": "G-ADS",
+    "fixture": "tests/fixtures/ads-performance.json",
+    "family": "performance",
+    "expected_status": "COMPLETE",
+    "required_components": ["kpi_cards", "distribution", "line_chart", "data_table", "summary_insights"],
+    "assertions": ["self_contained", "negative_preserved", "zero_preserved", "accessible_charts", "back_to_top_contract"]
+  },
+  {
+    "case_id": "G-WEEKLY",
+    "fixture": "tests/fixtures/weekly-performance.json",
+    "family": "performance",
+    "expected_status": "PARTIAL",
+    "required_components": ["kpi_cards", "line_chart", "swot_grid", "summary_insights"],
+    "assertions": ["partial_visible", "limitations_visible", "null_preserved", "source_conflict_visible", "back_to_top_contract"]
+  },
+  {
+    "case_id": "G-VOC",
+    "fixture": "tests/fixtures/voc-insight.json",
+    "family": "insight",
+    "expected_status": "COMPLETE",
+    "required_components": ["distribution", "quote_cards", "keyword_topics", "summary_insights", "evidence_image_grid"],
+    "assertions": ["quotes_escaped", "image_embedded", "image_alt", "topic_table_present", "back_to_top_contract"]
+  },
+  {
+    "case_id": "G-MCP",
+    "fixture": "tests/fixtures/mcp-insight.json",
+    "family": "insight",
+    "expected_status": "COMPLETE",
+    "required_components": ["radar_comparison", "data_table", "evidence_compare", "summary_insights"],
+    "assertions": ["demo_visible", "radar_summary", "comparison_grid", "evidence_labels", "back_to_top_contract"]
+  },
+  {
+    "case_id": "G-OPERATIONS",
+    "fixture": "tests/fixtures/operations-operations.json",
+    "family": "operations",
+    "expected_status": "COMPLETE",
+    "required_components": ["narrative", "checklist", "swot_grid", "summary_insights"],
+    "assertions": ["checklist_states", "single_h1", "no_empty_components", "print_styles", "back_to_top_contract"]
+  },
+  {
+    "case_id": "G-KNOWLEDGE",
+    "fixture": "tests/fixtures/knowledge-knowledge.json",
+    "family": "knowledge",
+    "expected_status": "BLOCKED",
+    "required_components": ["narrative"],
+    "assertions": ["blocked_quality_page", "no_normal_dashboard", "limitations_visible", "no_fabricated_values", "back_to_top_contract"]
+  }
+]
