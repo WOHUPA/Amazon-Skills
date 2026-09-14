@@ -1,0 +1,122 @@
+[
+  {
+    "case_id": "TRIG-01",
+    "prompt": "把这份广告分析 JSON 渲染成 HTML 报告",
+    "expected": "trigger",
+    "reason": "显式要求 Amazon 业务 HTML 渲染"
+  },
+  {
+    "case_id": "TRIG-02",
+    "prompt": "生成一个离线可打开的 Amazon 周报 HTML",
+    "expected": "trigger",
+    "reason": "Amazon 周报 + HTML 产物"
+  },
+  {
+    "case_id": "TRIG-03",
+    "prompt": "上游已给出 amazon-html-report/v1 协议 JSON，请渲染",
+    "expected": "trigger",
+    "reason": "显式协议 handoff"
+  },
+  {
+    "case_id": "TRIG-04",
+    "prompt": "用这个 spec 生成自包含报告页面",
+    "expected": "trigger",
+    "reason": "报告页面 + 自包含约束"
+  },
+  {
+    "case_id": "TRIG-05",
+    "prompt": "把这个 Amazon 数据文件渲染成可视化网页",
+    "expected": "trigger",
+    "reason": "Amazon 数据 + 网页渲染"
+  },
+  {
+    "case_id": "TRIG-06",
+    "prompt": "帮我做一份亚马逊广告 HTML 报告",
+    "expected": "trigger",
+    "reason": "亚马逊广告 + HTML 报告"
+  },
+  {
+    "case_id": "TRIG-07",
+    "prompt": "渲染为 PDF 或飞书文档",
+    "expected": "no_trigger",
+    "reason": "PDF/飞书排版不属于本 Skill"
+  },
+  {
+    "case_id": "TRIG-08",
+    "prompt": "分析一下这个月的广告花费趋势",
+    "expected": "no_trigger",
+    "reason": "业务分析不由渲染器承担"
+  },
+  {
+    "case_id": "TRIG-09",
+    "prompt": "从 LinkFox 拉取报表",
+    "expected": "no_trigger",
+    "reason": "取数由上游 Skill 负责"
+  },
+  {
+    "case_id": "TRIG-10",
+    "prompt": "把广告预算提高 20%",
+    "expected": "no_trigger",
+    "reason": "外部系统变更不适用"
+  },
+  {
+    "case_id": "TRIG-11",
+    "prompt": "写一篇亚马逊运营经验文章",
+    "expected": "no_trigger",
+    "reason": "非报告渲染任务"
+  },
+  {
+    "case_id": "TRIG-12",
+    "prompt": "普通的长篇业务回答",
+    "expected": "no_trigger",
+    "reason": "一般长回答不触发"
+  },
+  {
+    "case_id": "TRIG-13",
+    "prompt": "把这个旧 HTML 转成 Markdown",
+    "expected": "no_trigger",
+    "reason": "HTML 转换非本 Skill 职责"
+  },
+  {
+    "case_id": "TRIG-14",
+    "prompt": "生成 VOC 分析 HTML 页面",
+    "expected": "trigger",
+    "reason": "VOC + HTML 页面"
+  },
+  {
+    "case_id": "TRIG-15",
+    "prompt": "做一个 MCP 工具对比报告网页",
+    "expected": "trigger",
+    "reason": "对比报告 + 网页产物"
+  },
+  {
+    "case_id": "TRIG-16",
+    "prompt": "需要亚马逊运营 SOP 的 HTML 版本",
+    "expected": "trigger",
+    "reason": "SOP + HTML 产物"
+  },
+  {
+    "case_id": "TRIG-17",
+    "prompt": "用 HTML 展示这份知识库内容",
+    "expected": "trigger",
+    "reason": "知识库 + HTML"
+  },
+  {
+    "case_id": "TRIG-18",
+    "prompt": "生成库存补货 HTML 报告",
+    "expected": "trigger",
+    "reason": "库存报告 + HTML"
+  },
+  {
+    "case_id": "TRIG-19",
+    "prompt": "把结果整理成表格给我看就行",
+    "expected": "no_trigger",
+    "reason": "一般表格回答不触发"
+  },
+  {
+    "case_id": "TRIG-20",
+    "prompt": "回复一份竞争分析摘要即可",
+    "expected": "no_trigger",
+    "reason": "普通分析摘要不触发"
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "version": "1.0.6",
+  "audit_date": "2026-09-12",
+  "skill": "amazon-html-report-renderer",
+  "renderer_file": "scripts/report_renderer.py",
+  "renderer_hash": "d9c4f7b08f63b8a3cfdb53757766f2f80b9ac7f7e3e08ba9381c2ce4c3e24f2e",
+  "tests": {
+    "unit_and_integration": {
+      "command": "python -m unittest discover -s tests -p \"test_*.py\" -v",
+      "passed": 40,
+      "total": 40
+    },
+    "golden_fixtures": {
+      "command": "python scripts/run_golden_fixtures.py --format json",
+      "passed": 6,
+      "total": 6
+    },
+    "trigger_evals": {
+      "command": "python -m evals.trigger_evals",
+      "passed": 20,
+      "total": 20
+    },
+    "sync_dry_run": {
+      "command": "python scripts/sync_to_codex.py --dry-run",
+      "result": "in-sync via junction"
+    },
+    "chrome_visual_qa": {
+      "command": "node tests/run_visual_qa.mjs",
+      "passed": 40,
+      "total": 40
+    }
+  },
+  "result": "PASS_WITH_LIMITS",
+  "limits": [
+    "renderer_file 2458 行超过单文件建议上限（非阻断 WARN）",
+    "SKILL.md description 66 字首句 + 全局 description 预算（非阻断 WARN）"
+  ]
+}
