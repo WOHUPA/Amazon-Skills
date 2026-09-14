@@ -1,0 +1,7 @@
+interface:
+  display_name: "Amazon HTML 报告渲染器"
+  short_description: "将已分析、已脱敏的 Amazon 报告 JSON 渲染为安全离线 HTML"
+  default_prompt: "使用 $amazon-html-report-renderer 将已分析、已脱敏且符合 amazon-html-report/v1 的 Amazon 报告模型渲染为自包含 HTML 和可审计回执；不要取数、计算业务指标、形成业务结论或发布到外部系统。"
+
+policy:
+  allow_implicit_invocation: true
