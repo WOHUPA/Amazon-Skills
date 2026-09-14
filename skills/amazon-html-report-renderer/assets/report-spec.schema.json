@@ -1,0 +1,946 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amazon-skills.local/schemas/amazon-html-report-v1.schema.json",
+  "title": "Amazon HTML Report v1",
+  "description": "Strict structured handoff for self-contained Amazon HTML reports. Cross-reference, privacy, image and output checks are enforced by the renderer.",
+  "type": "object",
+  "required": [
+    "protocol",
+    "report",
+    "sources",
+    "metrics",
+    "datasets",
+    "sections",
+    "limitations",
+    "render"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "amazon-html-report/v1"
+    },
+    "report": {
+      "$ref": "#/$defs/report"
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/metric"
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dataset"
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/section"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/limitation"
+      }
+    },
+    "render": {
+      "$ref": "#/$defs/render"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "report": {
+            "properties": {
+              "report_type": {
+                "const": "custom"
+              }
+            },
+            "required": ["report_type"]
+          }
+        },
+        "required": ["report"]
+      },
+      "then": {
+        "properties": {
+          "render": {
+            "properties": {
+              "family": {
+                "enum": ["performance", "insight", "operations", "knowledge"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": ".*\\S.*"
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$"
+    },
+    "sourceRefs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "valueStatus": {
+      "enum": [
+        "OBSERVED",
+        "DERIVED",
+        "MISSING",
+        "CONFLICT",
+        "NO_ROW",
+        "NO_ACCESS",
+        "COLLECTION_FAILURE",
+        "NOT_APPLICABLE",
+        "NO_BASELINE"
+      ]
+    },
+    "report": {
+      "type": "object",
+      "required": [
+        "report_id",
+        "report_type",
+        "title",
+        "locale",
+        "marketplace",
+        "period",
+        "timezone",
+        "currency",
+        "report_version",
+        "data_mode",
+        "status",
+        "report_edition",
+        "report_edition_reason",
+        "data_quality",
+        "evidence_strength",
+        "privacy"
+      ],
+      "properties": {
+        "report_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "report_type": {
+          "enum": [
+            "ads_analysis",
+            "amazon_ads_analysis",
+            "operations_weekly",
+            "amazon_operations_weekly_review",
+            "voc",
+            "amazon_voc_analysis",
+            "product_research",
+            "competitor_analysis",
+            "keyword_analysis",
+            "mcp_comparison",
+            "amazon_tool_comparison",
+            "inventory",
+            "profitability",
+            "operations_sop",
+            "daily_operations",
+            "amazon_daily_operations",
+            "action_plan",
+            "knowledge_base",
+            "amazon_seller_knowledge_base",
+            "policy_analysis",
+            "methodology",
+            "retrospective",
+            "custom"
+          ]
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "locale": {
+          "type": "string",
+          "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+        },
+        "marketplace": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "timezone": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "report_version": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "data_mode": {
+          "enum": ["REAL", "DEMO"]
+        },
+        "status": {
+          "enum": ["COMPLETE", "PARTIAL", "BLOCKED"]
+        },
+        "report_edition": {
+          "enum": ["BASIC", "ENHANCED_PARTIAL", "ENHANCED_FULL"]
+        },
+        "report_edition_reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "data_quality": {
+          "enum": ["A", "B", "C", "D"]
+        },
+        "evidence_strength": {
+          "enum": ["strong", "medium", "weak", "conflict", "none"]
+        },
+        "privacy": {
+          "$ref": "#/$defs/privacy"
+        }
+      },
+      "additionalProperties": false
+    },
+    "period": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "start": {
+          "type": "string",
+          "format": "date"
+        },
+        "end": {
+          "type": "string",
+          "format": "date"
+        },
+        "data_as_of": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "privacy": {
+      "type": "object",
+      "required": ["redaction_status", "contains_private_identifiers"],
+      "properties": {
+        "redaction_status": {
+          "enum": ["REDACTED", "PUBLIC_ONLY", "NOT_APPLICABLE"]
+        },
+        "contains_private_identifiers": {
+          "const": false
+        },
+        "notes": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "source_id",
+        "name",
+        "source_type",
+        "provider_family",
+        "role",
+        "status",
+        "source_tier",
+        "data_quality_grade",
+        "behavior_evidence_tier",
+        "observed_at"
+      ],
+      "properties": {
+        "source_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_type": {
+          "enum": [
+            "official_policy",
+            "authorized_first_party",
+            "amazon_public",
+            "trusted_third_party",
+            "historical_case",
+            "expert_experience",
+            "user_provided",
+            "model_inference"
+          ]
+        },
+        "provider_family": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "role": {
+          "enum": ["PRIMARY", "VERIFICATION", "FALLBACK", "MANUAL"]
+        },
+        "status": {
+          "enum": ["AVAILABLE", "PARTIAL", "UNAVAILABLE", "CONFLICT", "NOT_APPLICABLE"]
+        },
+        "source_tier": {
+          "enum": ["S0", "S1", "S2", "S3", "S4", "S5"]
+        },
+        "data_quality_grade": {
+          "enum": ["A", "B", "C", "D"]
+        },
+        "behavior_evidence_tier": {
+          "enum": ["STATIC", "UNIT", "INTEGRATION", "LIVE", "UNVERIFIED"]
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data_as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scope": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "metric": {
+      "type": "object",
+      "required": [
+        "metric_id",
+        "label",
+        "value",
+        "value_status",
+        "unit",
+        "source_refs",
+        "field_level"
+      ],
+      "properties": {
+        "metric_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "value": {
+          "type": ["number", "null"]
+        },
+        "value_status": {
+          "$ref": "#/$defs/valueStatus"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "format": {
+          "enum": ["number", "integer", "currency", "percent", "signed_percent", "ratio", "duration", "text"]
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "source_refs": {
+          "$ref": "#/$defs/sourceRefs"
+        },
+        "field_level": {
+          "enum": [
+            "basic_required",
+            "enhancement_global_required",
+            "module_required",
+            "full_required",
+            "display_optional"
+          ]
+        },
+        "definition": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "grain": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "derivation": {
+          "$ref": "#/$defs/derivation"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "value_status": {
+                "const": "DERIVED"
+              }
+            },
+            "required": ["value_status"]
+          },
+          "then": {
+            "required": ["derivation"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "value_status": {
+                "enum": [
+                  "MISSING",
+                  "CONFLICT",
+                  "NO_ROW",
+                  "NO_ACCESS",
+                  "COLLECTION_FAILURE",
+                  "NOT_APPLICABLE",
+                  "NO_BASELINE"
+                ]
+              }
+            },
+            "required": ["value_status"]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "derivation": {
+      "type": "object",
+      "required": ["formula", "input_refs", "calculation_receipt"],
+      "properties": {
+        "formula": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "input_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "calculation_receipt": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "additionalProperties": false
+    },
+    "dataset": {
+      "type": "object",
+      "required": ["dataset_id", "label", "kind", "source_refs", "columns", "rows"],
+      "properties": {
+        "dataset_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "kind": {
+          "enum": [
+            "tabular",
+            "distribution",
+            "series",
+            "radar",
+            "quotes",
+            "keywords",
+            "swot",
+            "images",
+            "image_compare",
+            "checklist"
+          ]
+        },
+        "source_refs": {
+          "$ref": "#/$defs/sourceRefs"
+        },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/column"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/row"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "column": {
+      "type": "object",
+      "required": ["column_id", "label", "data_type"],
+      "properties": {
+        "column_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "data_type": {
+          "enum": ["string", "number", "integer", "boolean", "date", "datetime"]
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "additionalProperties": false
+    },
+    "row": {
+      "type": "object",
+      "required": ["row_id", "values"],
+      "properties": {
+        "row_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/cell"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "cell": {
+      "type": "object",
+      "required": ["column_id", "value", "status", "source_refs"],
+      "properties": {
+        "column_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "value": {
+          "type": ["number", "string", "boolean", "null"]
+        },
+        "status": {
+          "$ref": "#/$defs/valueStatus"
+        },
+        "source_refs": {
+          "$ref": "#/$defs/sourceRefs"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "MISSING",
+                  "CONFLICT",
+                  "NO_ROW",
+                  "NO_ACCESS",
+                  "COLLECTION_FAILURE",
+                  "NOT_APPLICABLE",
+                  "NO_BASELINE"
+                ]
+              }
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "section": {
+      "type": "object",
+      "required": ["section_id", "title", "components"],
+      "properties": {
+        "section_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/component"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "component": {
+      "oneOf": [
+        {"$ref": "#/$defs/kpiCards"},
+        {"$ref": "#/$defs/distribution"},
+        {"$ref": "#/$defs/lineChart"},
+        {"$ref": "#/$defs/dataTable"},
+        {"$ref": "#/$defs/radarComparison"},
+        {"$ref": "#/$defs/quoteCards"},
+        {"$ref": "#/$defs/keywordTopics"},
+        {"$ref": "#/$defs/summaryInsights"},
+        {"$ref": "#/$defs/swotGrid"},
+        {"$ref": "#/$defs/evidenceImageGrid"},
+        {"$ref": "#/$defs/evidenceCompare"},
+        {"$ref": "#/$defs/narrative"},
+        {"$ref": "#/$defs/checklist"}
+      ]
+    },
+    "componentId": {
+      "$ref": "#/$defs/identifier"
+    },
+    "componentTitle": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "kpiCards": {
+      "type": "object",
+      "required": ["type", "metric_ids"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "kpi_cards"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "metric_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "distribution": {
+      "type": "object",
+      "required": ["type", "dataset_id", "label_key", "value_key"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "distribution"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "label_key": {"$ref": "#/$defs/identifier"},
+        "value_key": {"$ref": "#/$defs/identifier"},
+        "chart": {"enum": ["donut", "pie"]}
+      },
+      "additionalProperties": false
+    },
+    "series": {
+      "type": "object",
+      "required": ["key"],
+      "properties": {
+        "key": {"$ref": "#/$defs/identifier"},
+        "label": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "additionalProperties": false
+    },
+    "lineChart": {
+      "type": "object",
+      "required": ["type", "dataset_id", "x_key", "series"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "line_chart"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "x_key": {"$ref": "#/$defs/identifier"},
+        "series": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/series"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "dataTable": {
+      "type": "object",
+      "required": ["type", "dataset_id"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "data_table"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "column_keys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "top_n": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "radarComparison": {
+      "type": "object",
+      "required": ["type", "dataset_id", "axis_key", "series"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "radar_comparison"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "axis_key": {"$ref": "#/$defs/identifier"},
+        "series": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/series"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "quote": {
+      "type": "object",
+      "required": ["text", "source_ref"],
+      "properties": {
+        "text": {"$ref": "#/$defs/nonEmptyString"},
+        "source_ref": {"$ref": "#/$defs/identifier"},
+        "author": {"$ref": "#/$defs/nonEmptyString"},
+        "rating": {"type": "number", "minimum": 0, "maximum": 5},
+        "sentiment": {"enum": ["positive", "neutral", "negative", "mixed", "unknown"]}
+      },
+      "additionalProperties": false
+    },
+    "quoteCards": {
+      "type": "object",
+      "required": ["type", "quotes"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "quote_cards"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "quotes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/quote"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "keywordTopics": {
+      "type": "object",
+      "required": ["type", "dataset_id", "keyword_key", "weight_key"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "keyword_topics"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "keyword_key": {"$ref": "#/$defs/identifier"},
+        "weight_key": {"$ref": "#/$defs/identifier"},
+        "column_keys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "insightItem": {
+      "oneOf": [
+        {"$ref": "#/$defs/nonEmptyString"},
+        {
+          "type": "object",
+          "required": ["title"],
+          "properties": {
+            "title": {"$ref": "#/$defs/nonEmptyString"},
+            "detail": {"$ref": "#/$defs/nonEmptyString"},
+            "severity": {"enum": ["info", "positive", "warning", "critical"]},
+            "source_refs": {"$ref": "#/$defs/sourceRefs"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "summaryInsights": {
+      "type": "object",
+      "required": ["type", "summary", "insights"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "summary_insights"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "summary": {"$ref": "#/$defs/nonEmptyString"},
+        "insights": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/insightItem"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "swotItem": {
+      "oneOf": [
+        {"$ref": "#/$defs/nonEmptyString"},
+        {
+          "type": "object",
+          "required": ["text"],
+          "properties": {
+            "text": {"$ref": "#/$defs/nonEmptyString"},
+            "source_refs": {"$ref": "#/$defs/sourceRefs"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "swotItems": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/swotItem"}
+    },
+    "swotGrid": {
+      "type": "object",
+      "required": ["type", "strengths", "weaknesses", "opportunities", "threats"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "swot_grid"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "strengths": {"$ref": "#/$defs/swotItems"},
+        "weaknesses": {"$ref": "#/$defs/swotItems"},
+        "opportunities": {"$ref": "#/$defs/swotItems"},
+        "threats": {"$ref": "#/$defs/swotItems"}
+      },
+      "additionalProperties": false
+    },
+    "localImageSrc": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=\\r\\n]+$"
+        },
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z]:[\\\\/].*\\.(?:png|PNG|jpg|JPG|jpeg|JPEG|webp|WEBP)$"
+        },
+        {
+          "type": "string",
+          "allOf": [
+            {"not": {"pattern": "^[A-Za-z][A-Za-z0-9+.-]*:"}},
+            {"not": {"pattern": "^[\\\\]{2}"}},
+            {"pattern": "\\.(?:png|PNG|jpg|JPG|jpeg|JPEG|webp|WEBP)$"}
+          ]
+        }
+      ]
+    },
+    "evidenceImage": {
+      "type": "object",
+      "required": ["src", "alt"],
+      "properties": {
+        "src": {"$ref": "#/$defs/localImageSrc"},
+        "alt": {"$ref": "#/$defs/nonEmptyString"},
+        "caption": {"$ref": "#/$defs/nonEmptyString"},
+        "source_ref": {"$ref": "#/$defs/identifier"}
+      },
+      "additionalProperties": false
+    },
+    "evidenceImageGrid": {
+      "type": "object",
+      "required": ["type", "images"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "evidence_image_grid"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "images": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/evidenceImage"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidenceCompare": {
+      "type": "object",
+      "required": ["type", "left", "right"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "evidence_compare"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "left": {"$ref": "#/$defs/evidenceImage"},
+        "right": {"$ref": "#/$defs/evidenceImage"},
+        "left_label": {"$ref": "#/$defs/nonEmptyString"},
+        "right_label": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "additionalProperties": false
+    },
+    "narrative": {
+      "type": "object",
+      "required": ["type", "paragraphs"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "narrative"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "paragraphs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "checklistItem": {
+      "type": "object",
+      "required": ["label", "status"],
+      "properties": {
+        "label": {"$ref": "#/$defs/nonEmptyString"},
+        "status": {"enum": ["done", "pending", "blocked", "warning"]},
+        "detail": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "additionalProperties": false
+    },
+    "checklist": {
+      "type": "object",
+      "required": ["type", "items"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "type": {"const": "checklist"},
+        "title": {"$ref": "#/$defs/componentTitle"},
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/checklistItem"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "limitation": {
+      "type": "object",
+      "required": ["limitation_id", "detail", "severity"],
+      "properties": {
+        "limitation_id": {"$ref": "#/$defs/identifier"},
+        "detail": {"$ref": "#/$defs/nonEmptyString"},
+        "severity": {"enum": ["INFO", "WARNING", "ERROR", "BLOCKER"]},
+        "source_refs": {"$ref": "#/$defs/sourceRefs"},
+        "impact": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "additionalProperties": false
+    },
+    "render": {
+      "type": "object",
+      "required": ["family", "theme", "show_toc"],
+      "properties": {
+        "family": {"enum": ["auto", "performance", "insight", "operations", "knowledge"]},
+        "theme": {"enum": ["system", "light", "dark"]},
+        "show_toc": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
