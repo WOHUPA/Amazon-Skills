@@ -1,0 +1,233 @@
+{
+  "protocol": "amazon-html-report/v1",
+  "report": {
+    "report_id": "demo-mcp-comparison",
+    "report_type": "amazon_tool_comparison",
+    "title": "Amazon 研究工具横向对比",
+    "locale": "zh-CN",
+    "marketplace": "US",
+    "period": {"label": "教学演示快照", "data_as_of": "2026-08-20T12:00:00+08:00"},
+    "timezone": "Asia/Shanghai",
+    "currency": "USD",
+    "report_version": "1.0.0",
+    "data_mode": "DEMO",
+    "status": "COMPLETE",
+    "report_edition": "ENHANCED_FULL",
+    "report_edition_reason": "教学数据完整，仅用于验证布局和组件。",
+    "data_quality": "A",
+    "evidence_strength": "medium",
+    "privacy": {
+      "redaction_status": "PUBLIC_ONLY",
+      "contains_private_identifiers": false,
+      "notes": "所有名称和评分均为教学占位，不代表真实工具表现。"
+    }
+  },
+  "sources": [
+    {
+      "source_id": "src-demo-matrix",
+      "name": "教学对比矩阵",
+      "source_type": "historical_case",
+      "provider_family": "Course Demo",
+      "role": "PRIMARY",
+      "status": "AVAILABLE",
+      "source_tier": "S4",
+      "data_quality_grade": "A",
+      "behavior_evidence_tier": "STATIC",
+      "observed_at": "2026-08-20T12:00:00+08:00",
+      "data_as_of": "2026-08-20T12:00:00+08:00",
+      "scope": "匿名工具 A 与工具 B 的教学演示",
+      "limitations": ["演示评分不可用于采购决策。"]
+    },
+    {
+      "source_id": "src-demo-images",
+      "name": "教学界面证据图",
+      "source_type": "user_provided",
+      "provider_family": "Local Evidence",
+      "role": "VERIFICATION",
+      "status": "AVAILABLE",
+      "source_tier": "S4",
+      "data_quality_grade": "B",
+      "behavior_evidence_tier": "STATIC",
+      "observed_at": "2026-08-20T12:05:00+08:00",
+      "scope": "匿名界面对比图",
+      "limitations": ["图片仅验证 compare 布局。"]
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "m-tool-count",
+      "label": "对比工具数",
+      "value": 2,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-demo-matrix"],
+      "field_level": "basic_required",
+      "definition": "本演示进入对比的匿名工具数量",
+      "grain": "comparison"
+    },
+    {
+      "metric_id": "m-axis-count",
+      "label": "对比维度数",
+      "value": 5,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-demo-matrix"],
+      "field_level": "enhancement_global_required",
+      "definition": "教学对比维度数量",
+      "grain": "comparison"
+    }
+  ],
+  "datasets": [
+    {
+      "dataset_id": "ds-tool-radar",
+      "label": "工具多维评分",
+      "kind": "radar",
+      "source_refs": ["src-demo-matrix"],
+      "columns": [
+        {"column_id": "axis", "label": "维度", "data_type": "string"},
+        {"column_id": "tool_a", "label": "匿名工具 A", "data_type": "number"},
+        {"column_id": "tool_b", "label": "匿名工具 B", "data_type": "number"}
+      ],
+      "rows": [
+        {
+          "row_id": "coverage",
+          "values": [
+            {"column_id": "axis", "value": "Amazon 覆盖", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": 82, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": 74, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        },
+        {
+          "row_id": "evidence",
+          "values": [
+            {"column_id": "axis", "value": "证据可追溯", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": 68, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": 88, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        },
+        {
+          "row_id": "automation",
+          "values": [
+            {"column_id": "axis", "value": "自动化", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": 91, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": 65, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        },
+        {
+          "row_id": "freshness",
+          "values": [
+            {"column_id": "axis", "value": "数据时效", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": 77, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": 80, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        },
+        {
+          "row_id": "usability",
+          "values": [
+            {"column_id": "axis", "value": "操作效率", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": 86, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": 72, "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_id": "ds-capabilities",
+      "label": "能力逐项对比",
+      "kind": "tabular",
+      "source_refs": ["src-demo-matrix"],
+      "columns": [
+        {"column_id": "capability", "label": "能力", "data_type": "string"},
+        {"column_id": "tool_a", "label": "匿名工具 A", "data_type": "string"},
+        {"column_id": "tool_b", "label": "匿名工具 B", "data_type": "string"}
+      ],
+      "rows": [
+        {
+          "row_id": "cap-public",
+          "values": [
+            {"column_id": "capability", "value": "公开商品研究", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": "支持", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": "支持", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        },
+        {
+          "row_id": "cap-history",
+          "values": [
+            {"column_id": "capability", "value": "趋势历史", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": "有限", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": "支持", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        },
+        {
+          "row_id": "cap-export",
+          "values": [
+            {"column_id": "capability", "value": "结构化交接", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_a", "value": "支持", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]},
+            {"column_id": "tool_b", "value": "需转换", "status": "OBSERVED", "source_refs": ["src-demo-matrix"]}
+          ]
+        }
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "mcp-multidimensional",
+      "title": "多维度对比",
+      "summary": "演示数据只用于验证雷达图与 Comparison Grid。",
+      "components": [
+        {"component_id": "mcp-radar", "type": "radar_comparison", "dataset_id": "ds-tool-radar", "axis_key": "axis", "series": [{"key": "tool_a", "label": "匿名工具 A"}, {"key": "tool_b", "label": "匿名工具 B"}]},
+        {"component_id": "mcp-table", "type": "data_table", "dataset_id": "ds-capabilities", "column_keys": ["capability", "tool_a", "tool_b"]}
+      ]
+    },
+    {
+      "section_id": "mcp-conclusion",
+      "title": "演示结论",
+      "components": [
+        {
+          "component_id": "mcp-summary",
+          "type": "summary_insights",
+          "summary": "两种匿名工具在自动化和证据追溯维度各有侧重。",
+          "insights": [
+            {"title": "保持教学边界", "detail": "演示评分不能替代当前实测和采购验证。", "severity": "warning", "source_refs": ["src-demo-matrix"]}
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "mcp-visual-compare",
+      "title": "视觉证据对比",
+      "components": [
+        {
+          "component_id": "mcp-evidence-compare",
+          "type": "evidence_compare",
+          "left": {
+            "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+            "alt": "匿名工具 A 的教学证据图",
+            "caption": "工具 A 匿名界面局部。",
+            "source_ref": "src-demo-images"
+          },
+          "right": {
+            "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+            "alt": "匿名工具 B 的教学证据图",
+            "caption": "工具 B 匿名界面局部。",
+            "source_ref": "src-demo-images"
+          },
+          "left_label": "匿名工具 A",
+          "right_label": "匿名工具 B"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "limitation_id": "lim-demo-only",
+      "detail": "全部评分与界面图均为教学演示。",
+      "severity": "BLOCKER",
+      "source_refs": ["src-demo-matrix", "src-demo-images"],
+      "impact": "不得用于真实工具采购或业务 Go 决策。"
+    }
+  ],
+  "render": {"family": "insight", "theme": "system", "show_toc": true}
+}

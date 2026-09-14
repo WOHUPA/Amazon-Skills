@@ -1,44 +1,41 @@
-[
-  {
-    "case_id": "G-ADS",
-    "family": "performance",
-    "expected_status": "COMPLETE",
-    "assertions": ["self_contained", "negative_preserved", "zero_preserved", "accessible_charts", "back_to_top_contract"],
-    "note": "广告组合表现；REAL 数据；零订单与负环比必须原样呈现。"
-  },
-  {
-    "case_id": "G-WEEKLY",
-    "family": "performance",
-    "expected_status": "PARTIAL",
-    "assertions": ["partial_visible", "limitations_visible", "null_preserved", "source_conflict_visible", "back_to_top_contract"],
-    "note": "周报部分数据缺失；冲突来源必须显式标识。"
-  },
-  {
-    "case_id": "G-VOC",
-    "family": "insight",
-    "expected_status": "COMPLETE",
-    "assertions": ["quotes_escaped", "image_embedded", "image_alt", "topic_table_present", "back_to_top_contract"],
-    "note": "VOC 洞察；引号转义与内嵌证据图。"
-  },
-  {
-    "case_id": "G-MCP",
-    "family": "insight",
-    "expected_status": "COMPLETE",
-    "assertions": ["demo_visible", "radar_summary", "comparison_grid", "evidence_labels", "back_to_top_contract"],
-    "note": "MCP 工具对比；DEMO 标识必须持续显示。"
-  },
-  {
-    "case_id": "G-OPERATIONS",
-    "family": "operations",
-    "expected_status": "COMPLETE",
-    "assertions": ["checklist_states", "single_h1", "no_empty_components", "print_styles", "back_to_top_contract"],
-    "note": "运营 SOP 报告；清单状态、单 H1 与打印表现。"
-  },
-  {
-    "case_id": "G-KNOWLEDGE",
-    "family": "knowledge",
-    "expected_status": "BLOCKED",
-    "assertions": ["blocked_quality_page", "no_normal_dashboard", "limitations_visible", "no_fabricated_values", "back_to_top_contract"],
-    "note": "知识库数据质量阻塞；必须渲染数据质量页而非正常看板。"
-  }
-]
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": 1,
+      "name": "广告表现报告",
+      "mode": "fixture",
+      "fixture": "tests/fixtures/ads-performance.json"
+    },
+    {
+      "id": 2,
+      "name": "运营周报",
+      "mode": "fixture",
+      "fixture": "tests/fixtures/weekly-performance.json"
+    },
+    {
+      "id": 3,
+      "name": "VOC 洞察",
+      "mode": "fixture",
+      "fixture": "tests/fixtures/voc-insight.json"
+    },
+    {
+      "id": 4,
+      "name": "MCP 横向对比",
+      "mode": "fixture",
+      "fixture": "tests/fixtures/mcp-insight.json"
+    },
+    {
+      "id": 5,
+      "name": "日常运营检查",
+      "mode": "fixture",
+      "fixture": "tests/fixtures/operations-operations.json"
+    },
+    {
+      "id": 6,
+      "name": "知识库阻塞页",
+      "mode": "fixture",
+      "fixture": "tests/fixtures/knowledge-knowledge.json"
+    }
+  ]
+}

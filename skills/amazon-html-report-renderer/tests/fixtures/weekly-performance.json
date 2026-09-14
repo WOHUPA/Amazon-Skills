@@ -1,0 +1,209 @@
+{
+  "protocol": "amazon-html-report/v1",
+  "report": {
+    "report_id": "weekly-redacted-partial",
+    "report_type": "amazon_operations_weekly_review",
+    "title": "匿名店铺运营周报",
+    "locale": "zh-CN",
+    "marketplace": "US",
+    "period": {
+      "label": "第 32 周",
+      "start": "2026-08-03",
+      "end": "2026-08-09",
+      "data_as_of": "2026-08-10T09:00:00+08:00"
+    },
+    "timezone": "Asia/Shanghai",
+    "currency": "USD",
+    "report_version": "1.0.0",
+    "data_mode": "REAL",
+    "status": "PARTIAL",
+    "report_edition": "ENHANCED_PARTIAL",
+    "report_edition_reason": "退货指标来源冲突，库存快照有一天缺失。",
+    "data_quality": "C",
+    "evidence_strength": "conflict",
+    "privacy": {
+      "redaction_status": "REDACTED",
+      "contains_private_identifiers": false,
+      "notes": "店铺、SKU 和订单标识已匿名。"
+    }
+  },
+  "sources": [
+    {
+      "source_id": "src-weekly-first-party",
+      "name": "匿名店铺周快照",
+      "source_type": "authorized_first_party",
+      "provider_family": "Amazon Store",
+      "role": "PRIMARY",
+      "status": "PARTIAL",
+      "source_tier": "S1",
+      "data_quality_grade": "B",
+      "behavior_evidence_tier": "INTEGRATION",
+      "observed_at": "2026-08-10T09:00:00+08:00",
+      "data_as_of": "2026-08-09T23:59:59-07:00",
+      "scope": "匿名店铺销售与库存聚合",
+      "limitations": ["一天库存快照未采集。"]
+    },
+    {
+      "source_id": "src-weekly-third-party",
+      "name": "匿名第三方退货摘要",
+      "source_type": "trusted_third_party",
+      "provider_family": "ERP",
+      "role": "VERIFICATION",
+      "status": "CONFLICT",
+      "source_tier": "S3",
+      "data_quality_grade": "C",
+      "behavior_evidence_tier": "UNVERIFIED",
+      "observed_at": "2026-08-10T09:10:00+08:00",
+      "data_as_of": "2026-08-09T23:59:59-07:00",
+      "scope": "退货率汇总",
+      "limitations": ["与第一方归属口径不同。"]
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "m-weekly-sales",
+      "label": "周销售额",
+      "value": 18240,
+      "value_status": "OBSERVED",
+      "unit": "currency",
+      "format": "currency",
+      "currency": "USD",
+      "source_refs": ["src-weekly-first-party"],
+      "field_level": "basic_required",
+      "definition": "周期内匿名店铺销售额",
+      "grain": "store-week"
+    },
+    {
+      "metric_id": "m-weekly-units",
+      "label": "销量",
+      "value": 0,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-weekly-first-party"],
+      "field_level": "basic_required",
+      "definition": "测试匿名新品组的真实零销量",
+      "grain": "product-group-week"
+    },
+    {
+      "metric_id": "m-stock-cover",
+      "label": "库存覆盖天数",
+      "value": null,
+      "value_status": "MISSING",
+      "unit": "days",
+      "format": "number",
+      "source_refs": ["src-weekly-first-party"],
+      "field_level": "enhancement_global_required",
+      "definition": "可售库存除以日均销量",
+      "grain": "store-week"
+    },
+    {
+      "metric_id": "m-return-rate",
+      "label": "退货率",
+      "value": null,
+      "value_status": "CONFLICT",
+      "unit": "percent",
+      "format": "percent",
+      "source_refs": ["src-weekly-first-party", "src-weekly-third-party"],
+      "field_level": "module_required",
+      "definition": "退货件数除以可比订单数",
+      "grain": "store-week"
+    }
+  ],
+  "datasets": [
+    {
+      "dataset_id": "ds-weekly-daily-sales",
+      "label": "日销售额与库存",
+      "kind": "series",
+      "source_refs": ["src-weekly-first-party"],
+      "columns": [
+        {"column_id": "date", "label": "日期", "data_type": "date"},
+        {"column_id": "sales", "label": "销售额", "data_type": "number", "unit": "USD"},
+        {"column_id": "inventory", "label": "库存", "data_type": "integer"}
+      ],
+      "rows": [
+        {
+          "row_id": "w1",
+          "values": [
+            {"column_id": "date", "value": "2026-08-03", "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]},
+            {"column_id": "sales", "value": 2600, "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]},
+            {"column_id": "inventory", "value": 480, "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]}
+          ]
+        },
+        {
+          "row_id": "w2",
+          "values": [
+            {"column_id": "date", "value": "2026-08-04", "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]},
+            {"column_id": "sales", "value": 2440, "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]},
+            {"column_id": "inventory", "value": null, "status": "MISSING", "source_refs": ["src-weekly-first-party"]}
+          ]
+        },
+        {
+          "row_id": "w3",
+          "values": [
+            {"column_id": "date", "value": "2026-08-05", "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]},
+            {"column_id": "sales", "value": 2780, "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]},
+            {"column_id": "inventory", "value": 445, "status": "OBSERVED", "source_refs": ["src-weekly-first-party"]}
+          ]
+        }
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "weekly-overview",
+      "title": "本周概览",
+      "summary": "销售数据可用，库存与退货字段仍为部分覆盖。",
+      "components": [
+        {"component_id": "weekly-kpis", "type": "kpi_cards", "metric_ids": ["m-weekly-sales", "m-weekly-units", "m-stock-cover", "m-return-rate"]},
+        {
+          "component_id": "weekly-summary",
+          "type": "summary_insights",
+          "summary": "库存覆盖天数暂不可判断，退货率保留冲突状态。",
+          "insights": [
+            {"title": "补齐库存快照", "detail": "缺失不是零，恢复采集后再计算覆盖天数。", "severity": "warning", "source_refs": ["src-weekly-first-party"]},
+            {"title": "核对退货口径", "detail": "不对冲突来源取平均。", "severity": "critical", "source_refs": ["src-weekly-first-party", "src-weekly-third-party"]}
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "weekly-trend",
+      "title": "销售与库存趋势",
+      "components": [
+        {"component_id": "weekly-trend", "type": "line_chart", "dataset_id": "ds-weekly-daily-sales", "x_key": "date", "series": [{"key": "sales", "label": "销售额"}, {"key": "inventory", "label": "库存"}]}
+      ]
+    },
+    {
+      "section_id": "weekly-judgement",
+      "title": "四维研判",
+      "components": [
+        {
+          "component_id": "weekly-swot",
+          "type": "swot_grid",
+          "strengths": [{"text": "销售快照覆盖主要日期。", "source_refs": ["src-weekly-first-party"]}],
+          "weaknesses": [{"text": "库存日快照存在缺口。", "source_refs": ["src-weekly-first-party"]}],
+          "opportunities": [{"text": "统一退货口径后可恢复周度趋势。", "source_refs": ["src-weekly-first-party", "src-weekly-third-party"]}],
+          "threats": [{"text": "来源冲突可能导致退货率误判。", "source_refs": ["src-weekly-first-party", "src-weekly-third-party"]}]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "limitation_id": "lim-inventory-gap",
+      "detail": "2026-08-04 库存快照缺失，未填充为零。",
+      "severity": "WARNING",
+      "source_refs": ["src-weekly-first-party"],
+      "impact": "库存覆盖天数不可计算。"
+    },
+    {
+      "limitation_id": "lim-return-conflict",
+      "detail": "第一方与第三方退货归属口径冲突。",
+      "severity": "BLOCKER",
+      "source_refs": ["src-weekly-first-party", "src-weekly-third-party"],
+      "impact": "不输出精确退货率。"
+    }
+  ],
+  "render": {"family": "performance", "theme": "system", "show_toc": true}
+}

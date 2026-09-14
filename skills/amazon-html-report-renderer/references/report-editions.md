@@ -1,23 +1,46 @@
-# Report Editions
+# 报告版本与字段等级
 
-## 报告版本
+## 边界
 
-| 版本 | 名称 | 字段覆盖 |
-| --- | --- | --- |
-| BASIC | 基础版 | 仅 basic_required 字段 |
-| ENHANCED_PARTIAL | 部分增强 | basic_required + enhancement_global_required |
-| ENHANCED_FULL | 完整增强 | 全部字段，含 module_required 与 full_required |
+报告版本由上游分析 Skill 根据来源、指标和增强模块判定。本渲染器不查询增强来源、不重新路由版本，也不因页面组件丰富而升级版本；只验证并持续展示上游声明。
 
-## 字段级别
+固定机器值与展示标签：
 
-- `basic_required`：基础必填字段。
-- `enhancement_global_required`：增强版全局必填。
-- `module_required`：模块级必填（如 VOC 模块、库存模块）。
-- `full_required`：完整增强必填。
-- `display_optional`：仅展示可选字段。
+| 机器值 | 展示标签 |
+|---|---|
+| `BASIC` | 基础版报告 |
+| `ENHANCED_PARTIAL` | 增强版报告（部分增强） |
+| `ENHANCED_FULL` | 增强版报告（完整增强） |
 
-## 语义
+报告头必须同时展示版本、版本原因、数据质量、证据强度和数据范围。版本、`data_quality=A/B/C/D`、`evidence_strength` 是独立轴，不相互推导。
 
-- 渲染器保留上游 `report_edition`，不自行升级或降级。
-- 缺失字段按 `value_status` 语义展示，禁止转成 0 或默认值。
-- `report_edition_reason` 说明为何采用当前版本，必须原样展示。
+每份非阻塞报告还必须提供可追溯展示：
+
+- 来源表：名称、角色、状态、观测时间、source tier、数据质量、行为证据等级、范围与限制。
+- 指标口径表或等价可展开区：指标名、定义/公式、来源、单位、字段等级和值状态。
+- 增强覆盖区：按五级字段列出已有事实、缺失/冲突项及对章节的影响；这是输入契约覆盖展示，不是新的业务得分。
+
+`BLOCKED` 页面只展示足以解释阻塞的来源、缺口、限制和补证路径，不得继续绘制正常 KPI、趋势或经营结论。
+
+## 五级字段
+
+| `field_level` | 含义 | 缺失展示 |
+|---|---|---|
+| `basic_required` | 有意义基础报告必须具备 | 上游应 BLOCK；渲染器只允许阻塞说明页 |
+| `enhancement_global_required` | 安全合并增强来源所需范围/连接/追溯字段 | 自动模式可保留基础版；不得伪增强 |
+| `module_required` | 某一增强模块成立所需最小字段 | 跳过依赖组件或显示 MANUAL/PARTIAL |
+| `full_required` | 完整增强清单中的字段 | 缺失时不能标 `ENHANCED_FULL` |
+| `display_optional` | 只丰富展示，不控制版本或行动 | 可省略或显示明确缺失，不补零 |
+
+## 展示一致性检查
+
+渲染器至少检查：
+
+1. `report_edition_reason` 非空并在报告头可见。
+2. `BASIC` 不被模板称作“增强版”；`ENHANCED_PARTIAL` 保留缺失模块和限制；`ENHANCED_FULL` 仍显示来源与未验证项。
+3. `basic_required` 指标缺失且报告不是 `BLOCKED` 时阻断，避免生成有外观无事实的基础报告。
+4. `ENHANCED_FULL` 中出现 `full_required` 缺失/冲突时阻断版本不一致；渲染器不自行改成部分增强。
+5. `display_optional` 缺失不改变版本。
+6. 数据质量或证据冲突必须按原状态展示，不因版本较高而隐藏。
+
+上游的完整版本路由应遵循：基础必填无效先 BLOCK；显式 basic 只用基础来源；安全/契约错误始终 BLOCK；增强全局口径无效时 auto 保留 BASIC、显式 enhanced 阻断；至少一个完整模块才是部分增强；所有 full-required 完成才是完整增强。

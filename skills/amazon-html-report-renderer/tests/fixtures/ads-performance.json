@@ -1,0 +1,263 @@
+{
+  "protocol": "amazon-html-report/v1",
+  "report": {
+    "report_id": "demo-ads-redacted",
+    "report_type": "amazon_ads_analysis",
+    "title": "匿名站点广告表现分析",
+    "locale": "zh-CN",
+    "marketplace": "US",
+    "period": {
+      "label": "最近 14 天",
+      "start": "2026-08-01",
+      "end": "2026-08-14",
+      "data_as_of": "2026-08-15T08:00:00+08:00"
+    },
+    "timezone": "Asia/Shanghai",
+    "currency": "USD",
+    "report_version": "1.0.0",
+    "data_mode": "REAL",
+    "status": "COMPLETE",
+    "report_edition": "ENHANCED_FULL",
+    "report_edition_reason": "匿名一方导出覆盖核心广告字段。",
+    "data_quality": "A",
+    "evidence_strength": "strong",
+    "privacy": {
+      "redaction_status": "REDACTED",
+      "contains_private_identifiers": false,
+      "notes": "店铺、Campaign 和搜索词均已替换为匿名标识。"
+    }
+  },
+  "sources": [
+    {
+      "source_id": "src-ads-export",
+      "name": "匿名 Amazon Ads 导出",
+      "source_type": "authorized_first_party",
+      "provider_family": "Amazon Ads",
+      "role": "PRIMARY",
+      "status": "AVAILABLE",
+      "source_tier": "S1",
+      "data_quality_grade": "A",
+      "behavior_evidence_tier": "INTEGRATION",
+      "observed_at": "2026-08-15T08:00:00+08:00",
+      "data_as_of": "2026-08-14T23:59:59-07:00",
+      "scope": "匿名广告组合汇总",
+      "limitations": []
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "m-spend",
+      "label": "广告花费",
+      "value": 1250.5,
+      "value_status": "OBSERVED",
+      "unit": "currency",
+      "format": "currency",
+      "currency": "USD",
+      "source_refs": ["src-ads-export"],
+      "field_level": "basic_required",
+      "definition": "周期内广告花费汇总",
+      "grain": "portfolio-period"
+    },
+    {
+      "metric_id": "m-sales",
+      "label": "广告销售额",
+      "value": 5002,
+      "value_status": "OBSERVED",
+      "unit": "currency",
+      "format": "currency",
+      "currency": "USD",
+      "source_refs": ["src-ads-export"],
+      "field_level": "basic_required",
+      "definition": "同归因窗口广告销售额",
+      "grain": "portfolio-period"
+    },
+    {
+      "metric_id": "m-acos",
+      "label": "ACoS",
+      "value": 25.0,
+      "value_status": "DERIVED",
+      "unit": "percent",
+      "format": "percent",
+      "source_refs": ["src-ads-export"],
+      "field_level": "basic_required",
+      "definition": "广告花费除以广告销售额",
+      "grain": "portfolio-period",
+      "derivation": {
+        "formula": "m-spend / m-sales * 100",
+        "input_refs": ["m-spend", "m-sales"],
+        "calculation_receipt": "1250.5 / 5002 * 100 = 25.0"
+      }
+    },
+    {
+      "metric_id": "m-zero-orders",
+      "label": "零订单关键词数",
+      "value": 0,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-ads-export"],
+      "field_level": "enhancement_global_required",
+      "definition": "满足测试范围且订单数为真实零的关键词数量",
+      "grain": "portfolio-period"
+    },
+    {
+      "metric_id": "m-sales-change",
+      "label": "销售额环比",
+      "value": -7.5,
+      "value_status": "OBSERVED",
+      "unit": "percent",
+      "format": "percent",
+      "source_refs": ["src-ads-export"],
+      "field_level": "display_optional",
+      "definition": "相邻等长周期广告销售额变化",
+      "grain": "portfolio-period"
+    }
+  ],
+  "datasets": [
+    {
+      "dataset_id": "ds-match-mix",
+      "label": "匹配方式花费分布",
+      "kind": "distribution",
+      "source_refs": ["src-ads-export"],
+      "columns": [
+        {"column_id": "match_type", "label": "匹配方式", "data_type": "string"},
+        {"column_id": "spend", "label": "花费", "data_type": "number", "unit": "USD"}
+      ],
+      "rows": [
+        {
+          "row_id": "broad",
+          "label": "广泛",
+          "values": [
+            {"column_id": "match_type", "value": "广泛", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "spend", "value": 500.2, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        },
+        {
+          "row_id": "phrase",
+          "label": "词组",
+          "values": [
+            {"column_id": "match_type", "value": "词组", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "spend", "value": 375.15, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        },
+        {
+          "row_id": "exact",
+          "label": "精准",
+          "values": [
+            {"column_id": "match_type", "value": "精准", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "spend", "value": 375.15, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_id": "ds-daily-trend",
+      "label": "每日广告趋势",
+      "kind": "series",
+      "source_refs": ["src-ads-export"],
+      "columns": [
+        {"column_id": "date", "label": "日期", "data_type": "date"},
+        {"column_id": "spend", "label": "花费", "data_type": "number", "unit": "USD"},
+        {"column_id": "sales", "label": "销售额", "data_type": "number", "unit": "USD"}
+      ],
+      "rows": [
+        {
+          "row_id": "day-1",
+          "values": [
+            {"column_id": "date", "value": "2026-08-01", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "spend", "value": 80, "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "sales", "value": 380, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        },
+        {
+          "row_id": "day-2",
+          "values": [
+            {"column_id": "date", "value": "2026-08-02", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "spend", "value": 92, "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "sales", "value": 410, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        },
+        {
+          "row_id": "day-3",
+          "values": [
+            {"column_id": "date", "value": "2026-08-03", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "spend", "value": 86, "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "sales", "value": 355, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_id": "ds-search-terms",
+      "label": "搜索词 TOP 3",
+      "kind": "tabular",
+      "source_refs": ["src-ads-export"],
+      "columns": [
+        {"column_id": "term", "label": "匿名搜索词", "data_type": "string"},
+        {"column_id": "clicks", "label": "点击", "data_type": "integer"},
+        {"column_id": "orders", "label": "订单", "data_type": "integer"}
+      ],
+      "rows": [
+        {
+          "row_id": "term-a",
+          "values": [
+            {"column_id": "term", "value": "关键词 A", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "clicks", "value": 42, "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "orders", "value": 8, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        },
+        {
+          "row_id": "term-b",
+          "values": [
+            {"column_id": "term", "value": "关键词 B", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "clicks", "value": 31, "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "orders", "value": 5, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        },
+        {
+          "row_id": "term-c",
+          "values": [
+            {"column_id": "term", "value": "关键词 C", "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "clicks", "value": 12, "status": "OBSERVED", "source_refs": ["src-ads-export"]},
+            {"column_id": "orders", "value": 0, "status": "OBSERVED", "source_refs": ["src-ads-export"]}
+          ]
+        }
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "ads-overview",
+      "title": "核心表现",
+      "summary": "同一归因口径下的核心广告表现。",
+      "components": [
+        {"component_id": "ads-kpis", "type": "kpi_cards", "metric_ids": ["m-spend", "m-sales", "m-acos", "m-zero-orders", "m-sales-change"]},
+        {
+          "component_id": "ads-summary",
+          "type": "summary_insights",
+          "summary": "广告销售额环比下降，但当前样例不包含预算调整授权。",
+          "insights": [
+            {"title": "先复核下滑来源", "detail": "按 Campaign 与搜索词层级拆解后再判断动作。", "severity": "warning", "source_refs": ["src-ads-export"]}
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "ads-mix",
+      "title": "结构与趋势",
+      "components": [
+        {"component_id": "ads-distribution", "type": "distribution", "dataset_id": "ds-match-mix", "label_key": "match_type", "value_key": "spend", "chart": "donut"},
+        {"component_id": "ads-trend", "type": "line_chart", "dataset_id": "ds-daily-trend", "x_key": "date", "series": [{"key": "spend", "label": "花费"}, {"key": "sales", "label": "销售额"}]}
+      ]
+    },
+    {
+      "section_id": "ads-ranking",
+      "title": "搜索词排名",
+      "components": [
+        {"component_id": "ads-top-terms", "type": "data_table", "dataset_id": "ds-search-terms", "column_keys": ["term", "clicks", "orders"], "top_n": 3}
+      ]
+    }
+  ],
+  "limitations": [],
+  "render": {"family": "performance", "theme": "system", "show_toc": true}
+}

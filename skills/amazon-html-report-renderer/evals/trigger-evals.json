@@ -1,122 +1,162 @@
 [
   {
-    "case_id": "TRIG-01",
-    "prompt": "把这份广告分析 JSON 渲染成 HTML 报告",
-    "expected": "trigger",
-    "reason": "显式要求 Amazon 业务 HTML 渲染"
+    "id": "TR-001",
+    "category": "explicit_amazon_html",
+    "input": "把这份已经分析完成的 Amazon 广告 JSON 渲染成一份可离线打开和打印的 HTML 报告。",
+    "should_trigger": true,
+    "expected_behavior": "触发 amazon-html-report-renderer，只负责校验结构化交接并渲染 performance 布局。",
+    "pass_criteria": "不重新取数、不重算广告指标、不生成新业务结论；输出自包含 HTML 与渲染收据。"
   },
   {
-    "case_id": "TRIG-02",
-    "prompt": "生成一个离线可打开的 Amazon 周报 HTML",
-    "expected": "trigger",
-    "reason": "Amazon 周报 + HTML 产物"
+    "id": "TR-002",
+    "category": "explicit_handoff",
+    "input": "上游 Skill 已按 amazon-html-report/v1 生成 report-spec.json，请调用 amazon-html-report-renderer 输出周报网页。",
+    "should_trigger": true,
+    "expected_behavior": "按显式协议交接触发，并采用 performance 或显式 family。",
+    "pass_criteria": "验证协议、证据、隐私与状态后渲染；不向用户索取 raw HTML。"
   },
   {
-    "case_id": "TRIG-03",
-    "prompt": "上游已给出 amazon-html-report/v1 协议 JSON，请渲染",
-    "expected": "trigger",
-    "reason": "显式协议 handoff"
+    "id": "TR-003",
+    "category": "voc_html",
+    "input": "将已脱敏的 Amazon VOC 分析模型制作成离线 HTML，包含评论引文、话题词和证据图片。",
+    "should_trigger": true,
+    "expected_behavior": "识别为 Amazon insight 报告渲染任务。",
+    "pass_criteria": "使用 quote_cards、keyword_topics 与合规 evidence 组件；不改写原评论。"
   },
   {
-    "case_id": "TRIG-04",
-    "prompt": "用这个 spec 生成自包含报告页面",
-    "expected": "trigger",
-    "reason": "报告页面 + 自包含约束"
+    "id": "TR-004",
+    "category": "operations_html",
+    "input": "把亚马逊日常运营检查清单的结构化结果生成响应式 HTML SOP 报告。",
+    "should_trigger": true,
+    "expected_behavior": "采用 operations 布局族。",
+    "pass_criteria": "保留 checklist 的真实 done/pending/blocked 状态，不把缺失项当完成。"
   },
   {
-    "case_id": "TRIG-05",
-    "prompt": "把这个 Amazon 数据文件渲染成可视化网页",
-    "expected": "trigger",
-    "reason": "Amazon 数据 + 网页渲染"
+    "id": "TR-005",
+    "category": "knowledge_html",
+    "input": "请把这份 Amazon 卖家知识库 report spec 渲染成有目录、深浅主题和打印样式的单文件 HTML。",
+    "should_trigger": true,
+    "expected_behavior": "采用 knowledge 布局族并生成完整静态正文。",
+    "pass_criteria": "JavaScript 禁用时正文仍可读；不加载远程字体或运行时。"
   },
   {
-    "case_id": "TRIG-06",
-    "prompt": "帮我做一份亚马逊广告 HTML 报告",
-    "expected": "trigger",
-    "reason": "亚马逊广告 + HTML 报告"
+    "id": "TR-006",
+    "category": "comparison_html",
+    "input": "将 Amazon 选品 MCP 横向对比的结构化数据输出为 insight HTML，展示雷达图、对比表和结论。",
+    "should_trigger": true,
+    "expected_behavior": "触发 insight 报告渲染。",
+    "pass_criteria": "数据组件只引用 dataset_id；SVG 图表带文本摘要和来源。"
   },
   {
-    "case_id": "TRIG-07",
-    "prompt": "渲染为 PDF 或飞书文档",
-    "expected": "no_trigger",
-    "reason": "PDF/飞书排版不属于本 Skill"
+    "id": "TR-007",
+    "category": "partial_status",
+    "input": "这份 Amazon 周报数据是 PARTIAL，请按原状态生成网页并把限制写清楚。",
+    "should_trigger": true,
+    "expected_behavior": "允许 PARTIAL 渲染但持续展示限制。",
+    "pass_criteria": "不将 null 补成 0，不将 PARTIAL 包装为 COMPLETE。"
   },
   {
-    "case_id": "TRIG-08",
-    "prompt": "分析一下这个月的广告花费趋势",
-    "expected": "no_trigger",
-    "reason": "业务分析不由渲染器承担"
+    "id": "TR-008",
+    "category": "blocked_status",
+    "input": "这个 Amazon 分析 handoff 是 BLOCKED，只生成数据质量说明 HTML，不要伪造仪表盘。",
+    "should_trigger": true,
+    "expected_behavior": "生成明确标识的阻塞说明页。",
+    "pass_criteria": "不渲染正常业务 dashboard，不补造指标或结论。"
   },
   {
-    "case_id": "TRIG-09",
-    "prompt": "从 LinkFox 拉取报表",
-    "expected": "no_trigger",
-    "reason": "取数由上游 Skill 负责"
+    "id": "TR-009",
+    "category": "missing_spec",
+    "input": "给我的亚马逊报告生成离线 HTML，结构化 spec 稍后提供。",
+    "should_trigger": true,
+    "expected_behavior": "触发后只请求 amazon-html-report/v1 的 spec，不接受任意 HTML 或 Markdown。",
+    "pass_criteria": "明确缺失输入并停止渲染，不猜报告数据。"
   },
   {
-    "case_id": "TRIG-10",
-    "prompt": "把广告预算提高 20%",
-    "expected": "no_trigger",
-    "reason": "外部系统变更不适用"
+    "id": "TR-010",
+    "category": "linkfox_acquisition",
+    "input": "用 LinkFox 请求并下载 Amazon 店铺周报，持续轮询到 DONE。",
+    "should_trigger": false,
+    "expected_behavior": "转交 LinkFox Amazon 报表获取能力。",
+    "pass_criteria": "不把取数、轮询或下载任务当 HTML 渲染。"
   },
   {
-    "case_id": "TRIG-11",
-    "prompt": "写一篇亚马逊运营经验文章",
-    "expected": "no_trigger",
-    "reason": "非报告渲染任务"
+    "id": "TR-011",
+    "category": "linkfox_ads_acquisition",
+    "input": "帮我调用 LinkFox 获取 Sponsored Products 搜索词报表。",
+    "should_trigger": false,
+    "expected_behavior": "转交广告报表获取 Skill。",
+    "pass_criteria": "不触发 renderer，不要求 report spec。"
   },
   {
-    "case_id": "TRIG-12",
-    "prompt": "普通的长篇业务回答",
-    "expected": "no_trigger",
-    "reason": "一般长回答不触发"
+    "id": "TR-012",
+    "category": "business_analysis",
+    "input": "分析这份亚马逊广告表，告诉我哪些词要否定、预算怎么调。",
+    "should_trigger": false,
+    "expected_behavior": "转交广告分析 Skill。",
+    "pass_criteria": "不由 renderer 计算 ACoS、否词或预算建议。"
   },
   {
-    "case_id": "TRIG-13",
-    "prompt": "把这个旧 HTML 转成 Markdown",
-    "expected": "no_trigger",
-    "reason": "HTML 转换非本 Skill 职责"
+    "id": "TR-013",
+    "category": "generic_analysis",
+    "input": "分析一下这份销售数据，给我本周总结和下一步建议。",
+    "should_trigger": false,
+    "expected_behavior": "普通业务分析不因可能有报告输出而触发。",
+    "pass_criteria": "缺少 Amazon HTML 或显式协议交接锚点。"
   },
   {
-    "case_id": "TRIG-14",
-    "prompt": "生成 VOC 分析 HTML 页面",
-    "expected": "trigger",
-    "reason": "VOC + HTML 页面"
+    "id": "TR-014",
+    "category": "wechat_html",
+    "input": "把这篇运营文章排成微信公众号可复制粘贴的 HTML。",
+    "should_trigger": false,
+    "expected_behavior": "转交微信 HTML 排版 Skill。",
+    "pass_criteria": "不生成 Amazon 离线报告模板。"
   },
   {
-    "case_id": "TRIG-15",
-    "prompt": "做一个 MCP 工具对比报告网页",
-    "expected": "trigger",
-    "reason": "对比报告 + 网页产物"
+    "id": "TR-015",
+    "category": "long_answer",
+    "input": "请用四千字详细解释亚马逊广告的匹配方式、竞价和归因窗口。",
+    "should_trigger": false,
+    "expected_behavior": "作为知识问答处理。",
+    "pass_criteria": "长文本本身不是 HTML 报告渲染触发条件。"
   },
   {
-    "case_id": "TRIG-16",
-    "prompt": "需要亚马逊运营 SOP 的 HTML 版本",
-    "expected": "trigger",
-    "reason": "SOP + HTML 产物"
+    "id": "TR-016",
+    "category": "pdf_output",
+    "input": "把这份 Amazon VOC 报告直接做成 PDF。",
+    "should_trigger": false,
+    "expected_behavior": "当前 v1 不提供 PDF。",
+    "pass_criteria": "不声称 renderer 能直接生成 PDF。"
   },
   {
-    "case_id": "TRIG-17",
-    "prompt": "用 HTML 展示这份知识库内容",
-    "expected": "trigger",
-    "reason": "知识库 + HTML"
+    "id": "TR-017",
+    "category": "raw_html_adapter",
+    "input": "把这段旧 HTML 和 JavaScript 注入 Amazon 报告模板里，原样执行。",
+    "should_trigger": false,
+    "expected_behavior": "拒绝 raw HTML/JavaScript 兼容适配。",
+    "pass_criteria": "不执行或拼接任意脚本，不以 renderer 的正常输入接受。"
   },
   {
-    "case_id": "TRIG-18",
-    "prompt": "生成库存补货 HTML 报告",
-    "expected": "trigger",
-    "reason": "库存报告 + HTML"
+    "id": "TR-018",
+    "category": "external_publish",
+    "input": "把生成好的亚马逊周报上传到飞书并通知全员。",
+    "should_trigger": false,
+    "expected_behavior": "外部发布不属于 renderer。",
+    "pass_criteria": "不上传、不通知；如已有 HTML 可转交相应发布能力。"
   },
   {
-    "case_id": "TRIG-19",
-    "prompt": "把结果整理成表格给我看就行",
-    "expected": "no_trigger",
-    "reason": "一般表格回答不触发"
+    "id": "TR-019",
+    "category": "generic_web_app",
+    "input": "做一个带登录、路由和数据库的电商管理后台。",
+    "should_trigger": false,
+    "expected_behavior": "这是应用开发请求。",
+    "pass_criteria": "不使用静态 Amazon 报告 renderer。"
   },
   {
-    "case_id": "TRIG-20",
-    "prompt": "回复一份竞争分析摘要即可",
-    "expected": "no_trigger",
-    "reason": "普通分析摘要不触发"
+    "id": "TR-020",
+    "category": "non_amazon_html",
+    "input": "把 SaaS 财务月报 JSON 渲染成离线 HTML。",
+    "should_trigger": false,
+    "expected_behavior": "缺少 Amazon 业务边界或显式 renderer 协议交接。",
+    "pass_criteria": "不抢占通用 HTML 报告任务。"
   }
 ]

@@ -1,0 +1,152 @@
+{
+  "protocol": "amazon-html-report/v1",
+  "report": {
+    "report_id": "operations-redacted",
+    "report_type": "amazon_daily_operations",
+    "title": "匿名店铺日常运营检查",
+    "locale": "zh-CN",
+    "marketplace": "US",
+    "period": {"label": "当日检查", "start": "2026-08-21", "end": "2026-08-21", "data_as_of": "2026-08-21T18:00:00+08:00"},
+    "timezone": "Asia/Shanghai",
+    "currency": "USD",
+    "report_version": "1.0.0",
+    "data_mode": "REAL",
+    "status": "COMPLETE",
+    "report_edition": "BASIC",
+    "report_edition_reason": "检查项和执行状态齐备。",
+    "data_quality": "A",
+    "evidence_strength": "strong",
+    "privacy": {
+      "redaction_status": "REDACTED",
+      "contains_private_identifiers": false,
+      "notes": "店铺、工单和负责人均以角色表示。"
+    }
+  },
+  "sources": [
+    {
+      "source_id": "src-ops-check",
+      "name": "匿名运营检查记录",
+      "source_type": "user_provided",
+      "provider_family": "Operations SOP",
+      "role": "PRIMARY",
+      "status": "AVAILABLE",
+      "source_tier": "S1",
+      "data_quality_grade": "A",
+      "behavior_evidence_tier": "INTEGRATION",
+      "observed_at": "2026-08-21T18:00:00+08:00",
+      "data_as_of": "2026-08-21T18:00:00+08:00",
+      "scope": "匿名店铺日常检查",
+      "limitations": []
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "m-check-total",
+      "label": "检查项",
+      "value": 4,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-ops-check"],
+      "field_level": "basic_required",
+      "definition": "纳入本次运行的检查项数量",
+      "grain": "daily-run"
+    },
+    {
+      "metric_id": "m-check-done",
+      "label": "已完成",
+      "value": 1,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-ops-check"],
+      "field_level": "basic_required",
+      "definition": "状态为 done 的检查项数量",
+      "grain": "daily-run"
+    },
+    {
+      "metric_id": "m-completion",
+      "label": "完成度",
+      "value": 25,
+      "value_status": "DERIVED",
+      "unit": "percent",
+      "format": "percent",
+      "source_refs": ["src-ops-check"],
+      "field_level": "enhancement_global_required",
+      "definition": "已完成检查项除以检查项总数",
+      "grain": "daily-run",
+      "derivation": {
+        "formula": "m-check-done / m-check-total * 100",
+        "input_refs": ["m-check-done", "m-check-total"],
+        "calculation_receipt": "1 / 4 * 100 = 25"
+      }
+    }
+  ],
+  "datasets": [],
+  "sections": [
+    {
+      "section_id": "ops-context",
+      "title": "检查说明",
+      "summary": "按状态保留已完成、待处理、警告与阻塞。",
+      "components": [
+        {
+          "component_id": "ops-narrative",
+          "type": "narrative",
+          "paragraphs": [
+            "本报告只呈现上游已确认的运营检查结果，不执行后台写操作。",
+            "上游原始内容——保留长破折号，不由模板改写。"
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "ops-checklist",
+      "title": "执行清单",
+      "components": [
+        {
+          "component_id": "ops-checklist",
+          "type": "checklist",
+          "items": [
+            {"label": "检查账号健康摘要", "status": "done", "detail": "已记录匿名结果。"},
+            {"label": "复核缺货风险", "status": "pending", "detail": "等待库存团队确认。"},
+            {"label": "核对异常价格提示", "status": "warning", "detail": "只读观察，未改价。"},
+            {"label": "关闭高风险工单", "status": "blocked", "detail": "缺少授权，保持阻塞。"}
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "ops-swot",
+      "title": "执行研判",
+      "components": [
+        {
+          "component_id": "ops-swot",
+          "type": "swot_grid",
+          "strengths": [{"text": "健康摘要已完成。", "source_refs": ["src-ops-check"]}],
+          "weaknesses": [{"text": "库存复核尚未闭环。", "source_refs": ["src-ops-check"]}],
+          "opportunities": [{"text": "可在授权后建立库存检查自动化。", "source_refs": ["src-ops-check"]}],
+          "threats": [{"text": "未经授权关闭工单会产生外部写风险。", "source_refs": ["src-ops-check"]}]
+        },
+        {
+          "component_id": "ops-summary",
+          "type": "summary_insights",
+          "summary": "当前完成度为 25%，阻塞项保持原状态。",
+          "insights": [
+            {"title": "先完成库存复核", "detail": "确认数据和负责人后再关闭任务。", "severity": "warning", "source_refs": ["src-ops-check"]},
+            {"title": "保留外部写授权门", "detail": "本报告不执行改价、关闭工单或其他写操作。", "severity": "critical", "source_refs": ["src-ops-check"]}
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "limitation_id": "lim-read-only",
+      "detail": "本产物为只读报告。",
+      "severity": "INFO",
+      "source_refs": ["src-ops-check"],
+      "impact": "待处理和阻塞项需要上游工作流继续执行。"
+    }
+  ],
+  "render": {"family": "operations", "theme": "system", "show_toc": true}
+}

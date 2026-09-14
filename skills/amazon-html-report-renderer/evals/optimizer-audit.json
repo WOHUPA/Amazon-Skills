@@ -1,38 +1,231 @@
 {
-  "version": "1.0.6",
-  "audit_date": "2026-09-12",
+  "protocol": "amazon-html-report-optimizer-audit/v1",
   "skill": "amazon-html-report-renderer",
-  "renderer_file": "scripts/report_renderer.py",
-  "renderer_hash": "d9c4f7b08f63b8a3cfdb53757766f2f80b9ac7f7e3e08ba9381c2ce4c3e24f2e",
-  "tests": {
-    "unit_and_integration": {
-      "command": "python -m unittest discover -s tests -p \"test_*.py\" -v",
-      "passed": 40,
-      "total": 40
+  "skill_version": "1.0.6",
+  "template_version": "1.0.5",
+  "audit_date": "2026-09-12",
+  "status": "PASS_WITH_LIMITS",
+  "release_basis": "amazon-skill-optimizer D05+D12 + skill-optimizer v2.5.2 + browser visual QA",
+  "non_blocking_limits": [
+    {
+      "severity": "P3",
+      "scope": "environment",
+      "evidence": "通用优化器在 effective scope 观察到 162 个 Skill、description 合计 33946 字符，高于 8000 聚合预算；目标 Skill 自身 description 问题为 0、同名冲突为 0、触发重叠为 0。",
+      "impact": "不影响本次 Renderer 行为、触发准确性或发布。"
     },
-    "golden_fixtures": {
-      "command": "python scripts/run_golden_fixtures.py --format json",
-      "passed": 6,
-      "total": 6
+    {
+      "severity": "P3",
+      "scope": "maintainability",
+      "evidence": "scripts/report_renderer.py 为 2458 行，高于通用建议 2200 行；最大函数 194 行，低于 200 行阈值，解析错误为 0。",
+      "impact": "不阻断本次行为修复；拆分文件会扩大变更面，留待独立重构。"
     },
-    "trigger_evals": {
-      "command": "python -m evals.trigger_evals",
-      "passed": 20,
-      "total": 20
+    {
+      "severity": "P3",
+      "scope": "consumer-validator",
+      "evidence": "两个运营周报副本的既有 frontmatter 包含 version 字段，wohu quick_validate 不接受该字段；两份 Skill 的触发、路径和 renderer 兼容测试均通过。",
+      "impact": "属于通用校验器与既有元数据约定的兼容告警，不影响本次模板版本握手。"
+    }
+  ],
+  "context": {
+    "path": "evals/amazon-context.json",
+    "domain_packs": ["visual-content", "business-analytics"],
+    "status": "PASS",
+    "errors": [],
+    "warnings": []
+  },
+  "creator_validation": {
+    "validator": "wohu-amazon-skill-creator/scripts/quick_validate.py",
+    "status": "PASS"
+  },
+  "schema_and_pipeline_validation": {
+    "report_schema": "assets/report-spec.schema.json",
+    "schema_fixtures": 6,
+    "schema_passed": 6,
+    "data_pipeline_contract": "assets/data-pipeline-contract.json",
+    "data_pipeline_contract_version": "1.2",
+    "status": "PASS",
+    "errors": [],
+    "warnings": []
+  },
+  "d05_visual_content": {
+    "status": "PASS",
+    "design_read": "中国 Amazon 卖家与运营团队使用的高密度、证据优先 B2B 报告",
+    "taste_dials": {"design_variance": 5, "motion_intensity": 2, "visual_density": 7},
+    "assertions": [
+      {"id": "D05-01", "status": "PASS", "evidence": "表头和整列全部已格式化可见单元格参与同一宽度审核；隐藏来源说明不参与计宽。"},
+      {"id": "D05-02", "status": "PASS", "evidence": "中文和 Unicode 全角计 1、半角计 0.5、组合符与控制字符计 0；10/10.5/11、20/21、混合中英文和超长文本边界均有确定性回归。"},
+      {"id": "D05-03", "status": "PASS", "evidence": "大于 10 个视觉单位按 min(48,max(16,4×ceil((最大值+2)/4)))em 分档；四布局均实测 32em 自适应列和 48em 封顶列。"},
+      {"id": "D05-04", "status": "PASS", "evidence": "业务数据表、图表数据摘要、雷达对比表、关键词表和来源附录全部复用列级审核；3/4/5/14 列布局均通过。"},
+      {"id": "D05-05", "status": "PASS", "evidence": "四布局合计 40/40 Chrome 场景通过，覆盖 1440×900、768×900、390×844 的浅色、深色、打印与移动端禁用 JavaScript。"},
+      {"id": "D05-06", "status": "PASS", "evidence": "屏幕端横向溢出只发生在键盘可达表格容器；所有场景页面根级无横向溢出，控制台异常、页面异常和外部请求均为 0。"},
+      {"id": "D05-07", "status": "PASS", "evidence": "打印端 expanded 列 min-width 归零且 white-space=normal；24 个长文本值逐值确认原文完整，不截断、不省略、不隐藏。"},
+      {"id": "D05-08", "status": "PASS", "evidence": "desktop-light 对比中，standard-3 与 wide-4 最大行高均由 97.25px 降至 72.50px，页面长度由 2373px 降至 2106px。"}
+    ],
+    "manual_boundary": "视觉 QA 只验证呈现、原文完整性和交互边界；业务内容真实性继续由上游来源、收据和人工复核负责。"
+  },
+  "d12_business_analytics": {
+    "status": "PASS",
+    "metric_contract": "N/A：Renderer 不拥有业务指标或经营计算，只校验并呈现上游已声明数值。",
+    "data_pipeline_contract": {
+      "path": "assets/data-pipeline-contract.json",
+      "validator_version": "1.2",
+      "status": "PASS",
+      "errors": [],
+      "warnings": []
     },
-    "sync_dry_run": {
-      "command": "python scripts/sync_to_codex.py --dry-run",
-      "result": "in-sync via junction"
+    "assertions": [
+      {"id": "D12-01", "status": "PASS", "evidence": "所有数值必须有 source_refs；DERIVED 必须声明 formula、input_refs 与 calculation_receipt。"},
+      {"id": "D12-02", "status": "PASS", "evidence": "null、真实零、负数、冲突、无权限与采集失败保持不同语义；缺失状态文本同样参与列宽审核。"},
+      {"id": "D12-03", "status": "PASS", "evidence": "回执继续包含语义哈希、原始输入哈希、渲染指纹、状态哈希、HTML 哈希、manifest 哈希、状态、警告和验证结果。"},
+      {"id": "D12-04", "status": "PASS", "evidence": "默认拒绝覆盖；双产物同目录暂存、备份恢复、提交、哈希读回与失败回滚保持不变。"},
+      {"id": "D12-05", "status": "PASS", "evidence": "Renderer 40/40 单元与集成测试、6/6 Golden、六组逐案例回执、20/20 Trigger eval 全部通过，无未执行案例。"},
+      {"id": "D12-06", "status": "PASS", "evidence": "AmazonContext、DataPipelineContract、JSON Schema、同步 dry-run 与正式评分器均通过。"},
+      {"id": "D12-07", "status": "PASS", "evidence": "广告 18/18、两个周报副本各 5/5、VOC 18/18、Listing 子报告签收 1/1 通过。"}
+    ]
+  },
+  "column_width_contract": {
+    "threshold_visual_units": 10,
+    "width_formula": "min(48, max(16, 4 * ceil((max_visual_units + 2) / 4)))em",
+    "fullwidth_units": 1.0,
+    "halfwidth_units": 0.5,
+    "combining_and_control_units": 0.0,
+    "max_width_em": 48,
+    "screen_overflow": "仅允许在键盘可达的表格容器内横向滚动",
+    "print_behavior": "重置动态最小列宽并恢复正常换行",
+    "original_value_policy": "保留完整原值，不截断、不省略、不隐藏"
+  },
+  "visual_evidence": {
+    "root": "D:/codex/亚马逊/亚马逊分析报告/work/20260912-amazon-report-table-width-visual-qa-v1",
+    "scenario_summary": "40/40 PASS",
+    "console_issues": 0,
+    "page_exceptions": 0,
+    "external_requests": 0,
+    "long_values_preserved": "24/24",
+    "layouts": [
+      {"name": "standard-3", "old_max_row_height_px": 97.25, "new_max_row_height_px": 72.5, "row_height_change_pct": -25.45, "old_page_height_px": 2373, "new_page_height_px": 2106, "page_height_change_pct": -11.25},
+      {"name": "wide-4", "old_max_row_height_px": 97.25, "new_max_row_height_px": 72.5, "row_height_change_pct": -25.45, "old_page_height_px": 2373, "new_page_height_px": 2106, "page_height_change_pct": -11.25},
+      {"name": "wide-5", "old_max_row_height_px": 72.5, "new_max_row_height_px": 72.5, "row_height_change_pct": 0.0, "old_page_height_px": 2091, "new_page_height_px": 2106, "page_height_change_pct": 0.72},
+      {"name": "dense-14", "old_max_row_height_px": 47.75, "new_max_row_height_px": 47.75, "row_height_change_pct": 0.0, "old_page_height_px": 1794, "new_page_height_px": 1809, "page_height_change_pct": 0.84}
+    ],
+    "artifact_hash_manifest": "artifact-hashes.json",
+    "artifact_hash_count": 31,
+    "comparison_hash": "7773a9890f2b1b86e614955d7b401e7d1a0b87b63c83df38fe618a2bc0866b0b"
+  },
+  "compatibility_audit": {
+    "status": "PASS",
+    "direct_consumer_skills": 4,
+    "modified_compatibility_files": 6,
+    "tests": {
+      "amazon_ad_report_analyzer": "18/18 PASS",
+      "weekly_review_primary": "5/5 PASS",
+      "weekly_review_monitor": "5/5 PASS",
+      "amazon_review_analysis_voc": "18/18 PASS",
+      "listing_subreport_receipt": "1/1 PASS"
     },
-    "chrome_visual_qa": {
-      "command": "node tests/run_visual_qa.mjs",
-      "passed": 40,
-      "total": 40
+    "consumer_health": {
+      "amazon_ad_report_analyzer": "PASS",
+      "weekly_review_primary": "WARN：quick_validate 不接受既有 frontmatter version 字段；renderer 测试通过",
+      "weekly_review_monitor": "WARN：quick_validate 不接受既有 frontmatter version 字段；renderer 测试通过",
+      "amazon_review_analysis_voc": "PASS"
+    },
+    "version_handshake": "消费方接受严格 SemVer，并在相邻 render receipt 存在时要求 HTML 页脚版本与 receipt.template_version 完全一致。",
+    "public_protocol": "amazon-html-report/v1 未变",
+    "public_schema": "assets/report-spec.schema.json 未变",
+    "public_cli": "未变",
+    "receipt_fields": "未变",
+    "historic_artifacts": "保持只读；版本或 SHA 不匹配时仍标记 STALE",
+    "template_version": "1.0.5"
+  },
+  "general_optimizer": {
+    "tool": "skill-optimizer v2.5.2",
+    "status": "WARN",
+    "health_grade": "A",
+    "health_score": 99,
+    "blocked": false,
+    "counts": {"OK": 60, "WARN": 1, "FAIL": 0, "MANUAL": 3, "SKIP": 0},
+    "data_quality_grade": "B",
+    "evidence_level": "中",
+    "dimensions": {
+      "结构与上下文健康": 100,
+      "触发与路由质量": 100,
+      "任务契约清晰度": 100,
+      "执行流程可操作性": 100,
+      "输出稳定性": 100,
+      "运行稳定性与故障恢复": 100,
+      "工具化与确定性": 100,
+      "评测与回归能力": 100,
+      "沉淀与演进": 100,
+      "安全与边界": 100,
+      "可维护性": 83
+    },
+    "target_description_issues": 0,
+    "target_duplicate_names": 0,
+    "target_overlap_count": 0,
+    "compilation": "9/9 PASS",
+    "cache_status": "PASS；验证过程未创建缓存产物",
+    "golden": "6/6 PASS",
+    "unit_tests": "40/40 PASS",
+    "evaluation_execution_verified": true,
+    "manual_resolution": "目标 Skill 未声明或启用子 agent；运行时无需启动或取消。当前实施任务已获用户明确确认，并按互斥文件范围使用并行协作，最终结果由主 Agent 复核。"
+  },
+  "amazon_optimizer": {
+    "status": "PASS",
+    "golden": "28/28 PASS",
+    "score_report": {
+      "input": "D:/codex/亚马逊/亚马逊分析报告/work/20260912-amazon-report-table-width-visual-qa-v1/optimizer-score-input.json",
+      "input_sha256": "2404c8ca33e9e6bbf97c7dd2a2acd0af6a306f18364c0cd85fca716f76d23fbd",
+      "status": "PASS",
+      "total_score": 97.97,
+      "core_health": 96.81,
+      "amazon_fitness": 100.0,
+      "behavioral_eval": 100.0,
+      "eval_coverage": 100.0,
+      "hard_gates": 0,
+      "evaluation_receipts": "6/6 VERIFIED; 30 assertions",
+      "release_state": "READY",
+      "release_decision": "PASS"
     }
   },
-  "result": "PASS_WITH_LIMITS",
-  "limits": [
-    "renderer_file 2458 行超过单文件建议上限（非阻断 WARN）",
-    "SKILL.md description 66 字首句 + 全局 description 预算（非阻断 WARN）"
-  ]
+  "rollback": {
+    "backup_root": "D:/codex/亚马逊/亚马逊分析报告/work/20260912-031658-amazon-report-table-width-v1-backup",
+    "manifest": "backup-manifest.md",
+    "files": 18,
+    "hash_verification": "18/18 matched before edit",
+    "scope": "restore only listed files"
+  },
+  "evidence_hashes": {
+    "SKILL.md": "dbaf64314160cd895f688b3be6c339137ef12d027fe931f3a7a8c326722427c0",
+    "SKILL.patch.md": "2689236214153a0b39101572596fabd17f7bc5d7b44d534ba625354eddf65aef",
+    "agents/openai.yaml": "bd1afc866c7f1d0e12f93b17133eb477a44bb3baa6b998990d3692501783d951",
+    "assets/data-pipeline-contract.json": "353a2b65978924bea0a3ca0bf6845cb833c882e234bec8bca28e4def6ae95114",
+    "assets/report-spec.schema.json": "669c34fea3b8bce4fadf7b8a283d374f1b97f1f7a674f683083023371186ce2c",
+    "evals/golden-cases.json": "baff6c32b300714fa7e7805ce8a58f8096a8639bb80e867e925c33363c422060",
+    "evals/golden-receipts.jsonl": "ad4d39ff140d21467d67323ac2b757b8f0fe68c7331e8d757e5e4fa13c1badf7",
+    "evals/trigger-evals.json": "2fab281b3a0c793ab1396465a4a1fe0dcb37ea3a16325589f6073d0461a8b9cf",
+    "references/component-contracts.md": "b62612bc16e0e755a87b6016391dc5f52b565fdbaa142867c6d4e9d1890e2bc8",
+    "references/design-system.md": "750797caa3a5e631a42709f23d6d5103c0f24966144b42bb1d6379b47af7f89b",
+    "references/golden_set.md": "7cf72c4346eb385cf01a905dcae5f82d3b491fc4528c072bc408c2f91f2f802e",
+    "scripts/render_report.py": "6e6e9b5c15c7e4b64b2b1db72a7bcaa3259a34a1ff79c89fee86d8f2b79db865",
+    "scripts/report_renderer.py": "3a3404f366273037d5e3fcd893a8e139c184a48dde3165cfbcb58933d261d2af",
+    "scripts/sync_to_codex.py": "e827e1fbad9ad27034d9a5d763016c11564aa25d5479556906762cdaad3e74bb",
+    "tests/run_golden.py": "dc0849bf5b72b45944ef89df8bab058387030b946c94259f0fc0fbf47e92479a",
+    "tests/run_visual_qa.mjs": "808de3cd51d72ebc84f618e20ffdd02bec58bd501adc5d239496506c3d172cbc",
+    "tests/test_render_report.py": "c1d8f652f85a939d9f3f12871800b76327c57c5d0093b140534880f288e1f5dd",
+    "tests/test_visual_contract.py": "c4e227d007aed46c77f93d50d1dfad296f38674eaa7eae99ea21877264f335e2"
+  },
+  "consumer_evidence_hashes": {
+    "ad/tests/test_html_report.py": "d88bdbb1210e212223135cac6e93d68f6d53a2cda6f9a5b474b94f54306533a7",
+    "ad/tests/test_advertised_product_cli.py": "ee07321cae30cc890abe323a742173b666bc3c310d61d4dbdcceb7eca6156016",
+    "ad/tests/test_report_redaction_cli.py": "6f73958f9959b0df5cfecb39325f26d0959be7b3f42955196f5f57879db42653",
+    "weekly-primary/tests/test_weekly_html.py": "d6d18045d0f01a606e99423c3399c41d4b9e0c9e27333109af944581c9f75d19",
+    "weekly-monitor/tests/test_weekly_html.py": "24284fd49d77d5684f167f3f1d8587aab3ce7d4d6ca21406ffcee4f4a6a2a9df",
+    "voc/references/segmented-contract.md": "1078f528473e4f7ad2c771c40eb5c528f3322e3f3d748d006c2646798225b943"
+  },
+  "scope_boundary": {
+    "future_reports_only": true,
+    "historical_reports_regenerated": false,
+    "historical_receipts_resigned": false,
+    "external_publish_or_upload": false,
+    "store_or_ad_account_writes": false
+  }
 }

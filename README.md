@@ -29,6 +29,7 @@ Amazon Skills 是一组面向 Amazon 运营、广告投放和 Skill 工程化的
 | [`skill-optimizer`](skills/skill-optimizer/) | Skill 体检、优化和回归治理 | Skill 不触发、触发打架、输出不稳定、需要系统升级 |
 | [`wohu-amazon-skill-creator`](skills/wohu-amazon-skill-creator/) | 亚马逊运营 Skill 创建、优化、审查和评测 | 把运营 SOP、内容流程或工具方法沉淀为可复用 Skill |
 | [`codex-theme-generator`](skills/codex-theme-generator/) | 生成并静态验证纯数据 Theme Pack v2 | 创建 Codex Desktop 深色、浅色或双模式主题 |
+| [`amazon-html-report-renderer`](skills/amazon-html-report-renderer/) | 将已分析、已脱敏的 Amazon 报告 JSON 渲染为离线 HTML | 广告、周报、VOC、选品、竞品、关键词、库存和 SOP 报告展示 |
 
 ## Codex Theme Studio
 
@@ -217,6 +218,26 @@ skills/skill-optimizer/
 │   └── openai.yaml                   # Agent 配置
 ```
 
+## amazon-html-report-renderer
+
+Amazon HTML 报告渲染 Skill，只接收符合 `amazon-html-report/v1` 的已分析、已脱敏 JSON，生成自包含、响应式、可打印的离线 HTML 和可审计回执。它不负责取数、业务指标计算、结论生成或外部系统写入。
+
+### 使用方式
+
+```text
+/amazon-html-report-renderer
+```
+
+### 命令行
+
+```bash
+python skills/amazon-html-report-renderer/scripts/render_report.py \
+  --spec path/to/report-spec.json \
+  --output path/to/report.html
+```
+
+输出包括 HTML 报告和同名 `.render-receipt.json` 回执；完整输入契约、组件规则、布局族和回归方式见该 Skill 目录中的 `references/`、`tests/` 与 `evals/`。
+
 ## 安装方式
 
 按你使用的客户端选择对应目录，将需要的 Skill 文件夹复制进去即可。
@@ -228,11 +249,13 @@ skills/skill-optimizer/
 cp -r skills/skill-optimizer ~/.codex/skills/
 cp -r skills/amazon-ads-initialization ~/.codex/skills/
 cp -r skills/wohu-amazon-skill-creator ~/.codex/skills/
+cp -r skills/amazon-html-report-renderer ~/.codex/skills/
 
 # Windows PowerShell
 Copy-Item -Recurse skills\skill-optimizer $env:USERPROFILE\.codex\skills\
 Copy-Item -Recurse skills\amazon-ads-initialization $env:USERPROFILE\.codex\skills\
 Copy-Item -Recurse skills\wohu-amazon-skill-creator $env:USERPROFILE\.codex\skills\
+Copy-Item -Recurse skills\amazon-html-report-renderer $env:USERPROFILE\.codex\skills\
 ```
 
 ### 安装到 Claude Code
@@ -242,11 +265,13 @@ Copy-Item -Recurse skills\wohu-amazon-skill-creator $env:USERPROFILE\.codex\skil
 cp -r skills/skill-optimizer ~/.claude/skills/
 cp -r skills/amazon-ads-initialization ~/.claude/skills/
 cp -r skills/wohu-amazon-skill-creator ~/.claude/skills/
+cp -r skills/amazon-html-report-renderer ~/.claude/skills/
 
 # Windows PowerShell
 Copy-Item -Recurse skills\skill-optimizer $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse skills\amazon-ads-initialization $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse skills\wohu-amazon-skill-creator $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse skills\amazon-html-report-renderer $env:USERPROFILE\.claude\skills\
 ```
 
 ## 推荐使用方式

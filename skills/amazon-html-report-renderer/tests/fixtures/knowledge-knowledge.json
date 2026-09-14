@@ -1,0 +1,70 @@
+{
+  "protocol": "amazon-html-report/v1",
+  "report": {
+    "report_id": "knowledge-blocked",
+    "report_type": "amazon_seller_knowledge_base",
+    "title": "Amazon 卖家知识库更新说明",
+    "locale": "zh-CN",
+    "marketplace": "US",
+    "period": {"label": "待核验版本", "data_as_of": "2026-08-22T10:00:00+08:00"},
+    "timezone": "Asia/Shanghai",
+    "currency": "USD",
+    "report_version": "1.0.0",
+    "data_mode": "REAL",
+    "status": "BLOCKED",
+    "report_edition": "BASIC",
+    "report_edition_reason": "引用政策缺少当前官方核验。",
+    "data_quality": "D",
+    "evidence_strength": "none",
+    "privacy": {
+      "redaction_status": "NOT_APPLICABLE",
+      "contains_private_identifiers": false,
+      "notes": "未包含店铺或买家数据。"
+    }
+  },
+  "sources": [
+    {
+      "source_id": "src-policy-placeholder",
+      "name": "待核验政策来源",
+      "source_type": "official_policy",
+      "provider_family": "Amazon Policy",
+      "role": "PRIMARY",
+      "status": "UNAVAILABLE",
+      "source_tier": "S0",
+      "data_quality_grade": "D",
+      "behavior_evidence_tier": "UNVERIFIED",
+      "observed_at": "2026-08-22T10:00:00+08:00",
+      "scope": "待确认的卖家政策章节",
+      "limitations": ["当前官方正文未提供，不能形成有效政策结论。"]
+    }
+  ],
+  "metrics": [],
+  "datasets": [],
+  "sections": [
+    {
+      "section_id": "knowledge-intended-scope",
+      "title": "计划覆盖范围",
+      "summary": "仅用于说明原定范围，BLOCKED 页面不得将其呈现为已核验知识。",
+      "components": [
+        {
+          "component_id": "knowledge-narrative",
+          "type": "narrative",
+          "paragraphs": [
+            "原计划解释政策适用对象、更新时间和卖家操作边界。",
+            "由于当前官方证据缺失，本次只生成数据质量说明页。"
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "limitation_id": "lim-policy-unverified",
+      "detail": "当前官方政策正文和生效时间均未核验。",
+      "severity": "BLOCKER",
+      "source_refs": ["src-policy-placeholder"],
+      "impact": "禁止输出正常知识库正文或操作建议。"
+    }
+  ],
+  "render": {"family": "knowledge", "theme": "system", "show_toc": true}
+}

@@ -1,0 +1,232 @@
+{
+  "protocol": "amazon-html-report/v1",
+  "report": {
+    "report_id": "voc-redacted",
+    "report_type": "amazon_voc_analysis",
+    "title": "匿名商品 VOC 洞察",
+    "locale": "zh-CN",
+    "marketplace": "US",
+    "period": {"label": "公开评论样本", "data_as_of": "2026-08-12T00:00:00Z"},
+    "timezone": "UTC",
+    "currency": "USD",
+    "report_version": "1.0.0",
+    "data_mode": "REAL",
+    "status": "COMPLETE",
+    "report_edition": "ENHANCED_FULL",
+    "report_edition_reason": "公开评论、话题与本地证据图片均已完成脱敏。",
+    "data_quality": "B",
+    "evidence_strength": "strong",
+    "privacy": {
+      "redaction_status": "REDACTED",
+      "contains_private_identifiers": false,
+      "notes": "评论者名称、订单信息和产品私有标识未进入交付。"
+    }
+  },
+  "sources": [
+    {
+      "source_id": "src-public-reviews",
+      "name": "匿名公开评论样本",
+      "source_type": "amazon_public",
+      "provider_family": "Amazon Reviews",
+      "role": "PRIMARY",
+      "status": "AVAILABLE",
+      "source_tier": "S2",
+      "data_quality_grade": "B",
+      "behavior_evidence_tier": "INTEGRATION",
+      "observed_at": "2026-08-12T08:00:00Z",
+      "data_as_of": "2026-08-12T00:00:00Z",
+      "scope": "匿名公开评论小样本",
+      "limitations": ["样本不代表全量买家。"]
+    },
+    {
+      "source_id": "src-local-evidence",
+      "name": "本地合规视觉证据",
+      "source_type": "user_provided",
+      "provider_family": "Local Evidence",
+      "role": "VERIFICATION",
+      "status": "AVAILABLE",
+      "source_tier": "S2",
+      "data_quality_grade": "B",
+      "behavior_evidence_tier": "STATIC",
+      "observed_at": "2026-08-12T08:05:00Z",
+      "scope": "匿名包装细节截图",
+      "limitations": ["仅用于说明视觉缺陷，不推断销量影响。"]
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "m-review-count",
+      "label": "评论样本数",
+      "value": 120,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-public-reviews"],
+      "field_level": "basic_required",
+      "definition": "进入主题编码的公开评论数",
+      "grain": "review-sample"
+    },
+    {
+      "metric_id": "m-negative-count",
+      "label": "负向评论数",
+      "value": 30,
+      "value_status": "OBSERVED",
+      "unit": "count",
+      "format": "integer",
+      "source_refs": ["src-public-reviews"],
+      "field_level": "enhancement_global_required",
+      "definition": "编码为负向的评论数量",
+      "grain": "review-sample"
+    },
+    {
+      "metric_id": "m-negative-share",
+      "label": "负向占比",
+      "value": 25,
+      "value_status": "DERIVED",
+      "unit": "percent",
+      "format": "percent",
+      "source_refs": ["src-public-reviews"],
+      "field_level": "enhancement_global_required",
+      "definition": "负向评论数除以评论样本数",
+      "grain": "review-sample",
+      "derivation": {
+        "formula": "m-negative-count / m-review-count * 100",
+        "input_refs": ["m-negative-count", "m-review-count"],
+        "calculation_receipt": "30 / 120 * 100 = 25"
+      }
+    }
+  ],
+  "datasets": [
+    {
+      "dataset_id": "ds-sentiment",
+      "label": "情绪分布",
+      "kind": "distribution",
+      "source_refs": ["src-public-reviews"],
+      "columns": [
+        {"column_id": "sentiment", "label": "情绪", "data_type": "string"},
+        {"column_id": "count", "label": "数量", "data_type": "integer"}
+      ],
+      "rows": [
+        {
+          "row_id": "positive",
+          "values": [
+            {"column_id": "sentiment", "value": "正向", "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "count", "value": 72, "status": "OBSERVED", "source_refs": ["src-public-reviews"]}
+          ]
+        },
+        {
+          "row_id": "neutral",
+          "values": [
+            {"column_id": "sentiment", "value": "中性", "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "count", "value": 18, "status": "OBSERVED", "source_refs": ["src-public-reviews"]}
+          ]
+        },
+        {
+          "row_id": "negative",
+          "values": [
+            {"column_id": "sentiment", "value": "负向", "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "count", "value": 30, "status": "OBSERVED", "source_refs": ["src-public-reviews"]}
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_id": "ds-topics",
+      "label": "话题与关键词",
+      "kind": "keywords",
+      "source_refs": ["src-public-reviews"],
+      "columns": [
+        {"column_id": "keyword", "label": "关键词", "data_type": "string"},
+        {"column_id": "weight", "label": "提及数", "data_type": "integer"},
+        {"column_id": "sentiment", "label": "主要情绪", "data_type": "string"}
+      ],
+      "rows": [
+        {
+          "row_id": "topic-size",
+          "values": [
+            {"column_id": "keyword", "value": "尺寸", "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "weight", "value": 28, "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "sentiment", "value": "负向", "status": "OBSERVED", "source_refs": ["src-public-reviews"]}
+          ]
+        },
+        {
+          "row_id": "topic-storage",
+          "values": [
+            {"column_id": "keyword", "value": "收纳", "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "weight", "value": 22, "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "sentiment", "value": "正向", "status": "OBSERVED", "source_refs": ["src-public-reviews"]}
+          ]
+        },
+        {
+          "row_id": "topic-zipper",
+          "values": [
+            {"column_id": "keyword", "value": "拉链", "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "weight", "value": 16, "status": "OBSERVED", "source_refs": ["src-public-reviews"]},
+            {"column_id": "sentiment", "value": "负向", "status": "OBSERVED", "source_refs": ["src-public-reviews"]}
+          ]
+        }
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "voc-overview",
+      "title": "VOC 概览",
+      "components": [
+        {"component_id": "voc-sentiment", "type": "distribution", "dataset_id": "ds-sentiment", "label_key": "sentiment", "value_key": "count", "chart": "pie"},
+        {
+          "component_id": "voc-summary",
+          "type": "summary_insights",
+          "summary": "尺寸说明和拉链体验是当前样本的主要负向话题。",
+          "insights": [
+            {"title": "核对尺寸信息层级", "detail": "优先检查详情页尺寸表达是否直观。", "severity": "warning", "source_refs": ["src-public-reviews"]},
+            {"title": "验证拉链细节", "detail": "将视觉证据与评论引文共同用于复核。", "severity": "info", "source_refs": ["src-public-reviews", "src-local-evidence"]}
+          ]
+        }
+      ]
+    },
+    {
+      "section_id": "voc-evidence",
+      "title": "原始文本证据",
+      "components": [
+        {
+          "component_id": "voc-quotes",
+          "type": "quote_cards",
+          "quotes": [
+            {"text": "The size guide was hard to understand, but the storage idea is useful.", "source_ref": "src-public-reviews", "author": "匿名买家 A", "rating": 3, "sentiment": "mixed"},
+            {"text": "The zipper failed after light use.", "source_ref": "src-public-reviews", "author": "匿名买家 B", "rating": 2, "sentiment": "negative"}
+          ]
+        },
+        {"component_id": "voc-topics", "type": "keyword_topics", "dataset_id": "ds-topics", "keyword_key": "keyword", "weight_key": "weight", "column_keys": ["keyword", "weight", "sentiment"]}
+      ]
+    },
+    {
+      "section_id": "voc-image-evidence",
+      "title": "合规视觉证据",
+      "components": [
+        {
+          "component_id": "voc-images",
+          "type": "evidence_image_grid",
+          "images": [
+            {
+              "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+              "alt": "匿名包装细节证据图",
+              "caption": "本地嵌入的匿名细节证据，仅作视觉核对。",
+              "source_ref": "src-local-evidence"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "limitation_id": "lim-voc-sample",
+      "detail": "评论为匿名样本，不代表全量买家。",
+      "severity": "INFO",
+      "source_refs": ["src-public-reviews"],
+      "impact": "结论仅用于确定复核方向。"
+    }
+  ],
+  "render": {"family": "insight", "theme": "system", "show_toc": true}
+}
